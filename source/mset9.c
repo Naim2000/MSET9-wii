@@ -1,6 +1,9 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdint.h>
 
+#include "mset9.h"
+#include "video.h"
 #include "fsop.h"
 
 #define ID1backupTag "_user-id1"
@@ -44,7 +47,8 @@ static const struct N3DSRegion N3DSRegions[NBR_REGIONS] = {
  */
 
 struct MSET9 {
-	int consoleVer, consoleRegion;
+	int consoleVer;
+	const struct N3DSRegion* region;
 	char ID0[32 +1], ID1[32 +1];
 };
 
@@ -54,7 +58,8 @@ static bool is3DSID(const char* name) {
 	if (strlen(name) != 32) return false;
 
 	// fuck it
-	uint32_t idparts[4];
+	uint32_t _idparts[4];
+	uint32_t *idparts = _idparts;
 	if (sscanf(name, "%08x%08x%08x%08x", idparts++, idparts++, idparts++, idparts++) != 4) // This is not an ID0/ID1
 		return false;
 
@@ -87,6 +92,10 @@ bool MSET9Start(int consoleVer) {
 		}
 	}
 	closedir(pdir);
+	if (!foundID0) {
+		puts(pBad  "Error #07: You have...... no ID0? Is your console reading the SD card?");
+		return false;
+	}
 
 	strcat(path, "/");
 	strcat(path, mset9.ID0);
@@ -96,8 +105,16 @@ bool MSET9Start(int consoleVer) {
 		return false;
 	}
 
-	bool foundId1 = false;
+	bool foundID1 = false;
 	while ((pent = readdir(pdir))) {
+		if (strlen(pent->d_name) != 32) continue;
+
+		/* ?
+		if (memmem(pent->d_name, 32, "sdmc")) {
+			puts(pInfo "MSET9 is already injected (?");
+		}
+		*/
+
 		if (is3DSID(pent->d_name)) {
 			if (foundID1) {
 				puts(pBad  "Error #12: You have multiple ID1's!");
@@ -109,12 +126,20 @@ bool MSET9Start(int consoleVer) {
 		}
 	}
 	closedir(pdir);
+	if (!foundID1) {
+		puts(pBad  "Error #07: You have...... no ID1? Is your console reading the SD card?");
+		return false;
+	}
 
-
+	mset9.consoleVer = consoleVer;
+	return true;
 }
 
 bool MSET9SanityCheck(void) {
+	static char path[PATH_MAX];
 	puts(pInfo "Performing sanity checks...");
+
+	puts(pInfo "Checking extracted files...");
 	if (!CheckFile("/boot9strap/boot9strap.firm", 0, true)
 	||	!CheckFile("/boot.firm", 0, false)
 	||	!CheckFile("/boot.3dsx", 0, false)
@@ -126,6 +151,53 @@ bool MSET9SanityCheck(void) {
 
 		return false;
 	}
+	puts(pGood "Extracted files look good!");
 
+	sprintf(path, "/Nintendo 3DS/%.32s/%.32s/", mset9.ID0, mset9.ID1);
+	chdir(path);
 
+	puts(pInfo "Checking databases...");
+	if (!CheckFile("dbs/import.db", dbsSize, false) || !CheckFile("dbs/title.db", dbsSize, false)) {
+		puts(pBad  "Error #10: Databases malformed/missing!");
+		fclose(fopen("dbs/import.db", "x"));
+		fclose(fopen("dbs/title.db",  "x"));
+
+		printf(pInfo "Please reset the title database by navigating to\n"
+			   pInfo "System Settings -> Data Management -> Nintendo 3DS -> Software -> Reset, then re-run the installer.\n\n"
+
+			   pInfo "Visual guide: https://3ds.hacks.guide/images/screenshots/database-reset.jpg\n"
+		);
+
+		return false;
+	}
+	puts(pGood "Databases look good!");
+
+	puts(pInfo "Looking for HOME menu extdata...");
+	char extDataPath[30];
+	struct stat st = {};
+
+	for (int i = 0; i < NBR_REGIONS; i++) {
+		const struct N3DSRegion* rgn = N3DSRegions + i;
+
+		sprintf(extDataPath, "extdata/00000000/%08x", rgn->homeMenuExtData);
+		if (stat(extDataPath, &st) == 0) {
+			printf(pGood "Found %s HOME menu extdata!\n", rgn->name);
+			mset9.region = rgn;
+		}
+	}
+
+	if (!mset9.region) {
+		puts(pBad "Error #04: No HOME menue extdata found! Is your console reading your SD card?");
+		return false;
+	}
+
+	puts(pInfo "Looking for Mii Maker extdata...");
+	sprintf(extDataPath, "extdata/00000000/%08x", mset9.region->MiiMakerExtData);
+	if (stat(extDataPath, &st) < 0) {
+		puts(pBad "Error #05: No Mii Maker extdata found!");
+		return false;
+	}
+	puts(pGood "Found Mii Maker extdata!");
+
+	return true;
 }

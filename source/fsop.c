@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include <string.h>
 #include <errno.h>
-#include <sys/stat.h>
 
+#include "video.h"
+#include "fsop.h"
 #include "sha256.h"
 
 bool CheckFile(const char* filepath, size_t filesize, bool verifySHA256) {
