@@ -8,19 +8,24 @@
 #include "sd.h"
 #include "mset9.h"
 
+__weak_symbol __printflike(1, 2)
+void OSReport(const char* fmt, ...) {}
+
 int main(void) {
-	printf("meme set 9\n\n");
+	wprintf(
+		L"MSET9-Wii installer by thepikachugamer\n"
+		L"MSET9 exploit by zoogie https://github.com/zoogie/MSET9\n" );
 
 	initpads();
 	if (!SDMount()) goto exit;
 
-	if (!MSET9Start(1)) goto exit;
+	MSET9Start();
 
 	if (!MSET9SanityCheck()) goto exit;
 
 exit:
 	SDUnmount();
-	puts("Press HOME to exit.");
+	wprintf(L"\nPress HOME to exit.");
 	wait_button(WPAD_BUTTON_HOME);
 	return 0;
 }
