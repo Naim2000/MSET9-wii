@@ -23,7 +23,7 @@ DSTATUS disk_status(BYTE pdrv) {
 
 	if (pdrv > 0) return STA_NOINIT;
 
-	if (!__io_wiisd.isInserted()) stat |= STA_NODISK;
+	if (!__io_wiisd.isInserted()) stat |= STA_NODISK | STA_NOINIT;
 
 	return stat;
 }

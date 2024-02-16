@@ -12,9 +12,9 @@ __weak_symbol __printflike(1, 2)
 void OSReport(const char* fmt, ...) {}
 
 int main(void) {
-	wprintf(
-		L"MSET9-Wii installer by thepikachugamer\n"
-		L"MSET9 exploit by zoogie https://github.com/zoogie/MSET9\n" );
+	puts(
+		"MSET9-Wii installer by thepikachugamer\n"
+		"MSET9 exploit by zoogie https://github.com/zoogie/MSET9\n" );
 
 	initpads();
 	if (!SDMount()) goto exit;
@@ -25,7 +25,7 @@ int main(void) {
 
 exit:
 	SDUnmount();
-	wprintf(L"\nPress HOME to exit.");
+	puts("\nPress HOME to exit.");
 	wait_button(WPAD_BUTTON_HOME);
 	return 0;
 }

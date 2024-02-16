@@ -13,41 +13,41 @@ bool CheckFile(const wchar_t* filepath, size_t filesize, bool verifySHA256) {
 
 	fres = f_stat(filepath, &st);
 	if (fres == FR_NO_FILE || fres == FR_NO_PATH) {
-		wprintf(pBad "	%ls: Does not exist on SD card!\n", filepath);
+		printf(pBad "	%ls: Does not exist on SD card!\n", filepath);
 		return false;
 	}
 	else if (fres != FR_OK) {
-		wprintf(pBad "	%ls: f_stat() failed (%i)\n", filepath, fres);
+		printf(pBad "	%ls: f_stat() failed (%i)\n", filepath, fres);
 		return false;		
 	}
 
 	if (st.fattrib & AM_DIR) {
-		wprintf(pBad "	%ls: Is a directory\n", filepath);
+		printf(pBad "	%ls: Is a directory\n", filepath);
 		return false;
 	}
 
 	if (filesize && st.fsize != filesize) {
-		float kb_filesize = filesize / 1024.f, kb_stfilesize = st.fsize / 1024.f;
-		wprintf(pBad "	%ls: File size incorrect! (expect %.2fKB, has %.2fKB)\n", filepath, kb_filesize, kb_stfilesize);
+		float mb_filesize = filesize / 1048576.f, mb_stfilesize = st.fsize / 1048576.f;
+		printf(pBad "	%ls: File size incorrect! (expected %.2fMB, is %.2fMB)\n", filepath, mb_filesize, mb_stfilesize);
 		return false;
 	}
 
 	if (verifySHA256) {
 		VRESULT vr = VerifyHash(filepath);
 		if (vr != VR_OK) {
-			wprintf(pBad "	%ls: SHA256 verification failed! (%i)\n", filepath, vr);
+			printf(pBad "	%ls: SHA256 verification failed! (%i)\n", filepath, vr);
 			return false;
 		}	
 	}
 
-	wprintf(pGood "	%ls: File OK! %s\n", filepath, verifySHA256? "(Hash verified)" : "");
+	printf(pGood "	%ls: File OK! %s\n", filepath, verifySHA256? "(Hash verified)" : "");
 	return true;
 }
 
 VRESULT VerifyHash(const wchar_t* filepath) {
 	static unsigned char buffer[0x1000];
-	static wchar_t path[0x400];
-	FIL fp = {};
+	wchar_t path[0x80] = {};
+	FIL fp = {}, fp_sha = {};
 	FRESULT fres = 0;
 
 	wcscpy(path, filepath);
@@ -70,13 +70,13 @@ VRESULT VerifyHash(const wchar_t* filepath) {
 	f_close(&fp);
 
 	wcscat(path, L".sha");
-	fres = f_open(&fp, path, FA_READ);
+	fres = f_open(&fp_sha, path, FA_READ);
 	if (fres != FR_OK) return VR_NO_HASHFILE;
 
 	unsigned char hash[SHA256_BLOCK_SIZE] = {};
 	UINT read = 0;
-	fres = f_read(&fp, hash, sizeof(hash), &read);
-	f_close(&fp);
+	fres = f_read(&fp_sha, hash, sizeof(hash), &read);
+	f_close(&fp_sha);
 
 	if (read != sizeof(hash)) return VR_NO_HASHFILE;
 	else if (memcmp(hashCalc, hash, sizeof(hash)) != 0) return VR_MISMATCH;
