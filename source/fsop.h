@@ -10,5 +10,8 @@ typedef enum {
 
 } VRESULT;
 
-bool CheckFile(const wchar_t*, size_t, bool verifySHA256);
-VRESULT VerifyHash(const wchar_t*);
+bool CheckFile(const char*, size_t, bool verifySHA256);
+VRESULT VerifyHash(const char*);
+
+FRESULT f_rmdir_r(const TCHAR* path);
+FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst);

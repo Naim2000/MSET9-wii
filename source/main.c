@@ -6,6 +6,7 @@
 #include "video.h"
 #include "pad.h"
 #include "sd.h"
+#include "fatfs/ff.h"
 #include "mset9.h"
 
 __weak_symbol __printflike(1, 2)
@@ -19,9 +20,13 @@ int main(void) {
 	initpads();
 	if (!SDMount()) goto exit;
 
-	MSET9Start();
+	MSET9Start(1);
 
 	if (!MSET9SanityCheck()) goto exit;
+
+	puts("Inject MSET9 now?");
+	wait_button(0);
+	if (buttons_down(WPAD_BUTTON_PLUS)) MSET9Injection();
 
 exit:
 	SDUnmount();

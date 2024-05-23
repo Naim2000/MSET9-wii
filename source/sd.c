@@ -16,12 +16,12 @@ bool SDMount(void) {
 	if (sdMounted) return true;
 
 	sdmc->startup();
-	return (sdMounted = (f_mount(&fs, L"sdmc:/", 1) == FR_OK));
+	return (sdMounted = (f_mount(&fs, "sdmc:/", 1) == FR_OK));
 
 }
 
 void SDUnmount(void) {
-	if (sdMounted) f_unmount(L"sdmc:/");
+	if (sdMounted) f_unmount("sdmc:/");
 	sdmc->shutdown();
 	sdMounted = false;
 }

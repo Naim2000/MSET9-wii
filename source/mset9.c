@@ -24,14 +24,14 @@ enum {
 	NBR_REGIONS
 };
 
-struct N3DSRegion
+typedef const struct N3DSRegion
 {
 	char name[4];
 	uint32_t homeMenuExtData;
 	uint32_t MiiMakerExtData;
-};
+} N3DSRegion;
 
-static const struct N3DSRegion N3DSRegions[NBR_REGIONS] = {
+static N3DSRegion N3DSRegions[NBR_REGIONS] = {
 	{ "USA", 0x8F, 0x217 },
 	{ "EUR", 0x98, 0x227 },
 	{ "JPN", 0x82, 0x207 },
@@ -40,37 +40,53 @@ static const struct N3DSRegion N3DSRegions[NBR_REGIONS] = {
 	{ "TWN", 0xB1, 0x287 },
 };
 
-/*
- * o3DS 11.8<->11.17: "FFFFFFFA119907488546696508A10122054B984768465946C0AA171C4346034CA047B84700900A0871A0050899CE0408730064006D00630000900A0862003900",
- * n3DS 11.8<->11.17: "FFFFFFFA119907488546696508A10122054B984768465946C0AA171C4346034CA047B84700900A0871A005085DCE0408730064006D00630000900A0862003900",
- * o3DS 11.4<->11.7 : "FFFFFFFA119907488546696508A10122054B984768465946C0AA171C4346034CA047B84700900A08499E050899CC0408730064006D00630000900A0862003900",
- * n3DS 11.4<->11.7 : "FFFFFFFA119907488546696508A10122054B984768465946C0AA171C4346034CA047B84700900A08459E050881CC0408730064006D00630000900A0862003900"
- */
+const char* const haxid1[] = {
+	// Old 3DS 11.8<->11.17
+	"\xef\xbf\xbf\xef\xab\xbf\xe9\xa4\x91\xe4\xa0\x87\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x88\xe2\x88\x81\xe4\xac\x85\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x83\xe4\x9e\xa0\xe4\x9e\xb8\xe9\x80\x80\xe0\xa0\x8a\xea\x81\xb1\xe0\xa0\x85\xec\xba\x99\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
+
+	// New 3DS 11.8<->11.17
+	"\xef\xbf\xbf\xef\xab\xbf\xe9\xa4\x91\xe4\xa0\x87\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x88\xe2\x88\x81\xe4\xac\x85\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x83\xe4\x9e\xa0\xe4\x9e\xb8\xe9\x80\x80\xe0\xa0\x8a\xea\x81\xb1\xe0\xa0\x85\xec\xb9\x9d\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
+
+	// Old 3DS 11.4<->11.7
+	"\xef\xbf\xbf\xef\xab\xbf\xe9\xa4\x91\xe4\xa0\x87\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x88\xe2\x88\x81\xe4\xac\x85\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x83\xe4\x9e\xa0\xe4\x9e\xb8\xe9\x80\x80\xe0\xa0\x8a\xe9\xb9\x89\xe0\xa0\x85\xec\xb2\x99\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
+
+	// New 3DS 11.4<->11.7
+	"\xef\xbf\xbf\xef\xab\xbf\xe9\xa4\x91\xe4\xa0\x87\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x88\xe2\x88\x81\xe4\xac\x85\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x83\xe4\x9e\xa0\xe4\x9e\xb8\xe9\x80\x80\xe0\xa0\x8a\xe9\xb9\x85\xe0\xa0\x85\xec\xb2\x81\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9"
+
+};
 
 struct MSET9 {
-	int consoleVer;
-	const struct N3DSRegion* region;
-	wchar_t ID0[32 +1], ID1[32 +1];
+	bool setup;
+	MSET9Version consoleVer;
+	N3DSRegion* region;
+	char ID[2][32 +1];
+	bool hasBackupID1;
+	bool hasHaxID1;
 };
 
 static struct MSET9 mset9 = {};
 
-static bool is3DSID(const wchar_t* name) {
-	if (wcslen(name) != 32) return false;
+static bool is3DSID(const char* name) {
+	if (strlen(name) != 32) return false;
 
-	// fuck it
 	uint32_t idparts[4];
-
-	return (swscanf(name, L"%08x%08x%08x%08x", idparts, idparts+1, idparts+2, idparts+3) == 4);
+	return sscanf(name, "%08x%08x%08x%08x", &idparts[0], &idparts[1], &idparts[2], &idparts[3]) == 4;
 }
 
-bool MSET9Start(void) {
-	static wchar_t path[0x100];
+static bool isBackupID1(const char* name) {
+	return strstr(name, ID1backupTag) == name + 32;
+}
+
+static bool isHaxID1(const char* name) {
+	return (bool)strstr(name, "sdmc");
+}
+
+bool MSET9Start(MSET9Version consoleVer) {
+	char path[256] = "sdmc:/Nintendo 3DS";
 	FRESULT fres = 0;
 	DIR dp = {};
 	FILINFO fl = {};
 
-	wcscpy(path, L"/Nintendo 3DS");
 	fres = f_opendir(&dp, path);
 	if (fres == FR_NO_PATH) {
 		printf(pBad "Error #01: Nintendo 3DS folder not found!\n"
@@ -82,19 +98,12 @@ bool MSET9Start(void) {
 		return false;
 	}
 
-	bool foundID0 = false;
-	while (true) {
-		fres = f_readdir(&dp, &fl);
-		if (fres != FR_OK || !fl.fname[0]) break;
-
+	int foundID0 = 0;
+	while ((fres = f_readdir(&dp, &fl)) == FR_OK && fl.fname[0]) {
 		if (is3DSID(fl.fname)) {
-			if (foundID0) {
-				printf(pBad  "Error #07: You have multiple ID0's!\n"
-						pInfo "Consult: https://wiki.hacks.guide/wiki/3DS:MID0\n");
-				return false;
-			}
-			foundID0 = true;
-			wcscpy(mset9.ID0, fl.fname);
+			printf(pInfo "Found ID0: %s\n", fl.fname);
+			strncpy(mset9.ID[0], fl.fname, 32);
+			foundID0++;
 		}
 	}
 	f_closedir(&dp);
@@ -102,91 +111,144 @@ bool MSET9Start(void) {
 	if (!foundID0) {
 		printf(pBad "Error #07: You have...... no ID0?\n"
 			   pBad "Is your console reading the SD card?\n");
+
+		return false;
+	}
+	else if (foundID0 > 1) {
+		printf(pBad  "Error #07: You have multiple (%i) ID0's!\n"
+			   pInfo "Consult: https://wiki.hacks.guide/wiki/3DS:MID0", foundID0);
+
 		return false;
 	}
 
-	wcscat(path, L"/");
-	wcscat(path, mset9.ID0);
+	strcat(path, "/");
+	strcat(path, mset9.ID[0]);
 	fres = f_opendir(&dp, path);
 	if (fres != FR_OK) {
 		printf(pBad "Failed to open ID0 folder (!?) (%i)\n", fres);
 		return false;
 	}
 
-	bool foundID1 = false;
-	while (true) {
-		fres = f_readdir(&dp, &fl);
-		if (fres != FR_OK || !fl.fname[0]) break;
-
-		if (is3DSID(fl.fname)) {
-			if (foundID1) {
-				printf(pBad  "Error #12: You have multiple ID1's!\n"
-					   pInfo "Consult: https://wiki.hacks.guide/wiki/3DS:MID1\n");
-				return false;
+	int foundID1 = 0;
+	int injectedConsoleVer = -1;
+	char curhaxID1[80] = {};
+	while ((fres = f_readdir(&dp, &fl)) == FR_OK && fl.fname[0]) {
+		if (is3DSID(fl.fname) || isBackupID1(fl.fname)) {
+			printf(pInfo "Found ID1: %s\n", fl.fname);
+			strncpy(mset9.ID[1], fl.fname, 32);
+			mset9.hasBackupID1 = isBackupID1(fl.fname);
+			foundID1++;
+		}
+		else if (isHaxID1(fl.fname)) {
+			injectedConsoleVer = 0;
+			strcpy(curhaxID1, fl.fname);
+			for (int i = 0; i < 4; i++) {
+				if (!strcmp(haxid1[i], fl.fname)) {
+					injectedConsoleVer = i + 1;
+					break;
+				}
 			}
-			foundID1 = true;
-			wcscpy(mset9.ID1, fl.fname);
+
+			printf(pInfo "Found injected MSET9, #%i\n", injectedConsoleVer);
 		}
 	}
 	f_closedir(&dp);
 
 	if (!foundID1) {
-		printf(pBad "Error #12: You have...... no ID1?\n"
-			   pBad "Is your console reading the SD card?\n");
+		puts(pBad "Error #12: You have...... no ID1?\n"
+			 pBad "Is your console reading the SD card?");
+
 		return false;
 	}
+	else if (foundID1 > 1) {
+		printf(pBad "You have multiple (%i) ID1's!\n"
+			   pBad "Consult: https://wiki.hacks.guide/wiki/3DS:MID1\n", foundID1);
 
+		return false;
+	}
+	if (injectedConsoleVer >= 0) {
+		puts(pNote "Found hax ID1, let's remove it for you");
+		f_chdir(path);
+		f_rmdir_r(curhaxID1);
+
+		if (mset9.hasBackupID1) {
+			char backupID1name[50];
+			strcpy(backupID1name, mset9.ID[1]);
+			strcat(backupID1name, ID1backupTag);
+			f_rename(backupID1name, mset9.ID[1]);
+		}
+
+		f_chdir("sdmc:/");
+	}
+
+	mset9.consoleVer = consoleVer;
+	mset9.setup = true;
 	return true;
 }
 
 bool MSET9SanityCheck(void) {
-	static wchar_t path[0x400];
-	printf(pInfo "Performing sanity checks...\n");
+	char path[256];
 
-	printf(pInfo "Checking extracted files...\n");
-	if (!CheckFile(L"/boot9strap/boot9strap.firm", 0, true)
-	||	!CheckFile(L"/boot.firm", 0, false)
-	||	!CheckFile(L"/boot.3dsx", 0, false)
-	||	!CheckFile(L"/b9", 0, false)
-	||	!CheckFile(L"/SafeB9S.bin", 0, false))
+	if (!mset9.setup) return false;
+
+	puts(pInfo "Performing sanity checks...");
+
+	puts(pInfo "Checking extracted files...");
+	if (!CheckFile("/boot9strap/boot9strap.firm", 0, true)
+	||	!CheckFile("/boot.firm", 0, false)
+	||	!CheckFile("/boot.3dsx", 0, false)
+	||	!CheckFile("/b9", 0, false)
+	||	!CheckFile("/SafeB9S.bin", 0, false))
 	{
-		printf(pBad  "Error #08: One or more files are missing or malformed!\n");
-		printf(pInfo "Please re-extract the MSET9 zip file, overwriting any files when prompted.\n");
+		puts(pBad  "Error #08: One or more files are missing or malformed!");
+		puts(pInfo "Please re-extract the MSET9 zip file, overwriting any files when prompted.");
 
 		return false;
 	}
-	printf(pGood "Extracted files look good!\n");
+	puts(pGood "Extracted files look good!\n");
 
-	swprintf(path, sizeof(path), L"/Nintendo 3DS/%.32s/%.32s/", mset9.ID0, mset9.ID1);
-	f_chdir(path);
+	sprintf(path, "sdmc:/Nintendo 3DS/%s/%s/", mset9.ID[0], mset9.ID[1]);
+	FRESULT fres = f_chdir(path);
+	if (fres != FR_OK) {
+		printf("f_chdir failed? (%i)\n", fres);
+		return false;
+	}
 
-	printf(pInfo "Checking databases...\n");
-	if (!CheckFile(L"dbs/import.db", dbsSize, false) || !CheckFile(L"dbs/title.db", dbsSize, false)) {
-		printf(pBad  "Error #10: Databases malformed/missing!\n\n");
+	puts(pInfo "Checking databases...");
+	if (!CheckFile("dbs/import.db", dbsSize, false)
+	||	!CheckFile("dbs/title.db",  dbsSize, false))
+	{
+		puts(pNote "Information #10: No title database!\n");
 
 		FIL db = {};
-		f_mkdir(L"dbs");
-		if (f_open(&db, L"dbs/import.db", FA_CREATE_NEW | FA_WRITE) == FR_OK) f_close(&db);
-		if (f_open(&db, L"dbs/title.db", FA_CREATE_NEW | FA_WRITE) == FR_OK) f_close(&db);
+		FRESULT fres = f_mkdir("dbs");
+		if (fres != FR_OK && fres != FR_EXIST) {
+			printf("f_mkdir failed! (%i)\n", fres);
+			return false;
+		}
 
-		printf(pInfo "Please reset the title database by navigating to\n"
-			   pInfo "	System Settings -> Data Management -> Nintendo 3DS\n"
-			   pInfo "	-> Software -> Reset, then re-run the installer.\n\n"
+		if (f_open(&db, "dbs/import.db", FA_CREATE_NEW | FA_WRITE) == FR_OK) f_close(&db);
+		if (f_open(&db, "dbs/title.db",  FA_CREATE_NEW | FA_WRITE) == FR_OK) f_close(&db);
 
-			   pInfo "Visual aid: https://3ds.hacks.guide/images/screenshots/database-reset.jpg\n"
+		puts(	pInfo "Please reset the title database by navigating to\n"
+				pInfo "	System Settings -> Data Management -> Nintendo 3DS\n"
+				pInfo "	-> Software -> Reset, then re-run the installer.\n\n"
+
+				pInfo "Visual aid: \n"
+				pInfo "https://3ds.hacks.guide/images/screenshots/database-reset.jpg"
 		);
 
 		return false;
 	}
-	printf(pGood "Databases look good!\n");
+	puts(pGood "Databases look good!");
 
-	printf(pInfo "Looking for HOME menu extdata...\n");
-	wchar_t extDataPath[30];
+	puts(pInfo "Looking for HOME menu extdata...");
+	char extDataPath[30];
 
 	for (int i = 0; i < NBR_REGIONS; i++) {
 		const struct N3DSRegion* rgn = N3DSRegions + i;
 
-		swprintf(extDataPath, sizeof(extDataPath), L"extdata/00000000/%08x", rgn->homeMenuExtData);
+		sprintf(extDataPath, "extdata/00000000/%08x", rgn->homeMenuExtData);
 		if (f_stat(extDataPath, 0) == FR_OK) {
 			printf(pGood "Found %s HOME menu extdata!\n", rgn->name);
 			mset9.region = rgn;
@@ -195,18 +257,122 @@ bool MSET9SanityCheck(void) {
 	}
 
 	if (!mset9.region) {
-		printf(pBad "Error #04: No HOME menu extdata found!\n"
-				pBad "Is your console reading your SD card?\n");
+		puts(pBad "Error #04: No HOME menu extdata found!\n"
+			 pBad "Is your console reading your SD card?");
 		return false;
 	}
 
-	printf(pInfo "Looking for Mii Maker extdata...\n");
-	swprintf(extDataPath, sizeof(extDataPath), L"extdata/00000000/%08x", mset9.region->MiiMakerExtData);
+	puts(pInfo "Looking for Mii Maker extdata...\n");
+	sprintf(extDataPath, "extdata/00000000/%08x", mset9.region->MiiMakerExtData);
 	if (f_stat(extDataPath, 0) != FR_OK) {
-		printf(pBad "Error #05: No Mii Maker extdata found!\n");
+		puts(pBad "Error #05: No Mii Maker extdata found!");
 		return false;
 	}
-	printf(pGood "Found Mii Maker extdata!\n");
+	puts(pGood "Found Mii Maker extdata!");
 
+	f_chdir("sdmc:/");
+	return true;
+}
+
+bool MSET9Injection(void) {
+	char path[256], path2[256];
+	FRESULT fres;
+	FIL fp;
+
+	if (!mset9.setup) return false;
+
+	puts(pInfo "Performing injection...");
+
+	sprintf(path, "sdmc:/Nintendo 3DS/%.32s/", mset9.ID[0]);
+	f_chdir(path);
+
+	// 1. Create hax ID1
+	const char* thishaxID1 = haxid1[mset9.consoleVer - 1];
+	sprintf(path,  "%s/", thishaxID1);
+	sprintf(path2, "%s/", mset9.ID[1]);
+
+	puts(pInfo "Creating hax id1...");
+	fres = f_mkdir(path);
+	if (fres != FR_OK) {
+		printf(pBad "f_mkdir #1 failed! (%i)\n", fres);
+		return false;
+	}
+
+	// 2. Copy Mii maker & HOME menu extdata over
+	puts(pInfo "Copying extdata over...");
+
+	sprintf(strchr(path, '/'),  "/extdata/");
+	sprintf(strchr(path2, '/'), "/extdata/");
+
+	fres = f_mkdir(path);
+	if (fres != FR_OK) {
+		printf(pBad "f_mkdir #2 failed! (%i)\n", fres);
+		return false;
+	}
+
+	strcat(path,  "00000000");
+	strcat(path2, "00000000");
+
+	fres = f_mkdir(path);
+	if (fres != FR_OK) {
+		printf(pBad "f_mkdir #2 failed! (%i)\n", fres);
+		return false;
+	}
+
+	sprintf(strrchr(path, '/'),  "/%08x", mset9.region->homeMenuExtData);
+	sprintf(strrchr(path2, '/'), "/%08x", mset9.region->homeMenuExtData);
+
+	fres = fcopy_r(path2, path);
+	if (fres != FR_OK) {
+		printf(pBad "fcopy_r failed! (%i)\n", fres);
+		return false;
+	}
+
+	sprintf(strrchr(path, '/'),  "/%08x", mset9.region->MiiMakerExtData);
+	sprintf(strrchr(path2, '/'), "/%08x", mset9.region->MiiMakerExtData);
+
+	fres = fcopy_r(path2, path);
+	if (fres != FR_OK) {
+		printf(pBad "fcopy_r failed! (%i)\n", fres);
+		return false;
+	}
+
+	// 3. Copy databases
+	puts(pInfo "Copying databases over...");
+	strcpy(strchr(path, '/'),  "/dbs");
+	strcpy(strchr(path2, '/'), "/dbs");
+
+	fres = fcopy_r(path2, path);
+	if (fres != FR_OK) {
+		printf(pBad "fcopy_r failed! (%i)\n", fres);
+		return false;
+	}
+
+	// 4. Create trigger file (002F003A.txt)
+	puts(pInfo "Injecting trigger file...");
+	strcpy(strchr(path, '/'), "/extdata/002F003A.txt");
+	fres = f_open(&fp, path, FA_CREATE_NEW | FA_WRITE);
+	if (fres != FR_OK) {
+		printf(pBad "f_open failed! (%i)\n", fres);
+		return false;
+	}
+
+	UINT written;
+	fres = f_write(&fp, "arm9 \"security\" processor vs. text file in extdata:", 52, &written);
+	f_close(&fp);
+
+	// 5. Back up original ID1
+	puts(pInfo "Backing up original ID1...");
+	strcpy(path,  mset9.ID[1]);
+	strcpy(path2, mset9.ID[1]);
+	strcat(path2, ID1backupTag);
+
+	fres = f_rename(path, path2);
+	if (fres != FR_OK) {
+		printf(pBad "f_rename failed! (%i)\n", fres);
+		return false;
+	}
+
+	puts(pGood "MSET9 injected, have fun!");
 	return true;
 }
