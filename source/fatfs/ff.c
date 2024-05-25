@@ -1963,8 +1963,10 @@ static void put_lfn (
 	BYTE sum			/* Checksum of the corresponding SFN */
 )
 {
+	/* Had to fix this up for the MSET9 hax id1 */
+
 	UINT i, s;
-	WCHAR wc;
+	DWORD wc;
 
 
 	dir[LDIR_Chksum] = sum;			/* Set checksum */
@@ -1975,11 +1977,11 @@ static void put_lfn (
 	i = (ord - 1) * 13;				/* Get offset in the LFN working buffer */
 	s = wc = 0;
 	do {
-		if (wc != 0xFFFF) wc = lfn[i++];	/* Get an effective character */
-		st_word(dir + LfnOfs[s], wc);		/* Put it */
-		if (wc == 0) wc = 0xFFFF;			/* Padding characters for following items */
+		if (wc != -1) wc = lfn[i++];	/* Get an effective character */
+		st_word(dir + LfnOfs[s], (WCHAR)wc);		/* Put it */
+		if (wc == 0) wc = -1;			/* Padding characters for following items */
 	} while (++s < 13);
-	if (wc == 0xFFFF || !lfn[i]) ord |= LLEF;	/* Last LFN part is the start of LFN sequence */
+	if (wc == -1 || !lfn[i]) ord |= LLEF;	/* Last LFN part is the start of LFN sequence */
 	dir[LDIR_Ord] = ord;			/* Set the LFN order */
 }
 
