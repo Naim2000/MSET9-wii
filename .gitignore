@@ -1,4 +1,4 @@
-memeset9.dol
-memeset9.elf
+*.dol
+*.elf
 .vscode
 build/
