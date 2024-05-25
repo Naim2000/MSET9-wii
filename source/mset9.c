@@ -40,7 +40,7 @@ static N3DSRegion N3DSRegions[NBR_REGIONS] = {
 	{ "TWN", 0xB1, 0x287 },
 };
 
-const char* const haxid1[] = {
+const char* const haxid1[4] = {
 	// Old 3DS 11.8<->11.17
 	"\xef\xbf\xbf\xef\xab\xbf\xe9\xa4\x91\xe4\xa0\x87\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x88\xe2\x88\x81\xe4\xac\x85\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x83\xe4\x9e\xa0\xe4\x9e\xb8\xe9\x80\x80\xe0\xa0\x8a\xea\x81\xb1\xe0\xa0\x85\xec\xba\x99\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
 
@@ -55,8 +55,14 @@ const char* const haxid1[] = {
 
 };
 
+typedef enum MSET9Status {
+	NOT_READY,
+	READY,
+	JUST_REMOVED,
+} MSET9Status;
+
 struct MSET9 {
-	bool setup;
+	MSET9Status status;
 	MSET9Version consoleVer;
 	N3DSRegion* region;
 	char ID[2][32 +1];
@@ -81,7 +87,7 @@ static bool isHaxID1(const char* name) {
 	return (bool)strstr(name, "sdmc");
 }
 
-bool MSET9Start(MSET9Version consoleVer) {
+bool MSET9Start() {
 	char path[256] = "sdmc:/Nintendo 3DS";
 	FRESULT fres = 0;
 	DIR dp = {};
@@ -131,7 +137,7 @@ bool MSET9Start(MSET9Version consoleVer) {
 
 	int foundID1 = 0;
 	int injectedConsoleVer = -1;
-	char curhaxID1[80] = {};
+	char curhaxID1[100] = {};
 	while ((fres = f_readdir(&dp, &fl)) == FR_OK && fl.fname[0]) {
 		if (is3DSID(fl.fname) || isBackupID1(fl.fname)) {
 			printf(pInfo "Found ID1: %s\n", fl.fname);
@@ -151,6 +157,9 @@ bool MSET9Start(MSET9Version consoleVer) {
 
 			printf(pInfo "Found injected MSET9, #%i\n", injectedConsoleVer);
 		}
+		else {
+			printf(pWarn "Unrecognized ID1 %s\n", fl.fname);
+		}
 	}
 	f_closedir(&dp);
 
@@ -166,32 +175,49 @@ bool MSET9Start(MSET9Version consoleVer) {
 
 		return false;
 	}
-	if (injectedConsoleVer >= 0) {
-		puts(pNote "Found hax ID1, let's remove it for you");
+
+	if (mset9.hasBackupID1) {
+		puts(pNote "Found backed up ID1, let's rename it back for you");
+		char backupID1name[50];
+		strcpy(backupID1name, mset9.ID[1]);
+		strcat(backupID1name, ID1backupTag);
 		f_chdir(path);
-		f_rmdir_r(curhaxID1);
-
-		if (mset9.hasBackupID1) {
-			char backupID1name[50];
-			strcpy(backupID1name, mset9.ID[1]);
-			strcat(backupID1name, ID1backupTag);
-			f_rename(backupID1name, mset9.ID[1]);
+		if ((fres = f_rename(backupID1name, mset9.ID[1])) != FR_OK) {
+			printf(pWarn "Failed to restore backed up ID1 ..? (%i)\n", fres);
 		}
-
 		f_chdir("sdmc:/");
 	}
 
+	if (injectedConsoleVer >= 0) {
+		puts(pNote "Found hax ID1, let's remove it for you");
+		f_chdir(path);
+		if ((fres = f_rmdir_r(curhaxID1)) != FR_OK) {
+			printf(pWarn "Failed to remove hax ID1 ..? (%i)\n", fres);
+		}
+		f_chdir("sdmc:/");
+
+		puts(pGood "MSET9 has been removed!");
+		mset9.status = JUST_REMOVED;
+		return false;
+	}
+
+	mset9.status = READY;
+	return true;
+}
+
+bool MSET9SetConsoleVer(MSET9Version consoleVer) {
+	if (!mset9.status) return false;
+
 	mset9.consoleVer = consoleVer;
-	mset9.setup = true;
 	return true;
 }
 
 bool MSET9SanityCheck(void) {
 	char path[256];
 
-	if (!mset9.setup) return false;
+	if (!mset9.status) return false;
 
-	puts(pInfo "Performing sanity checks...");
+	puts(pNote "Performing sanity checks...");
 
 	puts(pInfo "Checking extracted files...");
 	if (!CheckFile("/boot9strap/boot9strap.firm", 0, true)
@@ -207,7 +233,7 @@ bool MSET9SanityCheck(void) {
 	}
 	puts(pGood "Extracted files look good!\n");
 
-	sprintf(path, "sdmc:/Nintendo 3DS/%s/%s/", mset9.ID[0], mset9.ID[1]);
+	sprintf(path, "sdmc:/Nintendo 3DS/%.32s/%.32s/", mset9.ID[0], mset9.ID[1]);
 	FRESULT fres = f_chdir(path);
 	if (fres != FR_OK) {
 		printf("f_chdir failed? (%i)\n", fres);
@@ -230,12 +256,12 @@ bool MSET9SanityCheck(void) {
 		if (f_open(&db, "dbs/import.db", FA_CREATE_NEW | FA_WRITE) == FR_OK) f_close(&db);
 		if (f_open(&db, "dbs/title.db",  FA_CREATE_NEW | FA_WRITE) == FR_OK) f_close(&db);
 
-		puts(	pInfo "Please reset the title database by navigating to\n"
-				pInfo "	System Settings -> Data Management -> Nintendo 3DS\n"
-				pInfo "	-> Software -> Reset, then re-run the installer.\n\n"
+		puts(pInfo "Please reset the title database by navigating to\n"
+			 pInfo "	System Settings -> Data Management -> Nintendo 3DS\n"
+			 pInfo "	-> Software -> Reset, then re-run the installer.\n\n"
 
-				pInfo "Visual aid: \n"
-				pInfo "https://3ds.hacks.guide/images/screenshots/database-reset.jpg"
+			 pInfo "Visual aid: \n"
+			 pInfo "https://3ds.hacks.guide/images/screenshots/database-reset.jpg"
 		);
 
 		return false;
@@ -246,7 +272,7 @@ bool MSET9SanityCheck(void) {
 	char extDataPath[30];
 
 	for (int i = 0; i < NBR_REGIONS; i++) {
-		const struct N3DSRegion* rgn = N3DSRegions + i;
+		N3DSRegion* rgn = N3DSRegions + i;
 
 		sprintf(extDataPath, "extdata/00000000/%08x", rgn->homeMenuExtData);
 		if (f_stat(extDataPath, 0) == FR_OK) {
@@ -262,7 +288,7 @@ bool MSET9SanityCheck(void) {
 		return false;
 	}
 
-	puts(pInfo "Looking for Mii Maker extdata...\n");
+	puts(pInfo "Looking for Mii Maker extdata...");
 	sprintf(extDataPath, "extdata/00000000/%08x", mset9.region->MiiMakerExtData);
 	if (f_stat(extDataPath, 0) != FR_OK) {
 		puts(pBad "Error #05: No Mii Maker extdata found!");
@@ -279,9 +305,9 @@ bool MSET9Injection(void) {
 	FRESULT fres;
 	FIL fp;
 
-	if (!mset9.setup) return false;
+	if (!mset9.status || !mset9.consoleVer) return false;
 
-	puts(pInfo "Performing injection...");
+	puts(pNote "Performing injection...");
 
 	sprintf(path, "sdmc:/Nintendo 3DS/%.32s/", mset9.ID[0]);
 	f_chdir(path);
@@ -310,12 +336,12 @@ bool MSET9Injection(void) {
 		return false;
 	}
 
-	strcat(path,  "00000000");
-	strcat(path2, "00000000");
+	strcat(path,  "00000000/");
+	strcat(path2, "00000000/");
 
 	fres = f_mkdir(path);
 	if (fres != FR_OK) {
-		printf(pBad "f_mkdir #2 failed! (%i)\n", fres);
+		printf(pBad "f_mkdir #3 failed! (%i)\n", fres);
 		return false;
 	}
 
