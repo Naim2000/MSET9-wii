@@ -33,7 +33,7 @@ bool SDMount(void) {
 
 		usleep(100000);
 	}
-	clearln();
+	clearln(0);
 
 	if (!inserted) {
 		printf(pBad "No SD card inserted!\n");
@@ -43,20 +43,20 @@ bool SDMount(void) {
 	printf(pInfo "Mounting sdmc:/ ...\r");
 	FRESULT fres = f_mount(&fs, "sdmc:/", true);
 	if (fres == FR_OK) {
-		unsigned long freeSpace = (fs.free_clst * fs.csize) * 0x200;
-		unsigned long totalSpace = ((fs.n_fatent - 2) * fs.csize) * 0x200;
+		unsigned long freeSpace = (fs.free_clst * fs.csize);
+		unsigned long totalSpace = ((fs.n_fatent - 2) * fs.csize);
 
 		puts(pGood "Mounting sdmc:/ OK!");
 		sdMounted = true;
 
-		if (totalSpace < 0x80000000) // 2GB
+		if (totalSpace < 0x400000) // 2GB (4M sectors)
 		{
 			printf(pWarn "Your SD card is under 2GB? (%luMB)\n", totalSpace / 0x100000);
 			sleep(2);
 		}
 
 
-		if (freeSpace < 0x1000000) // 16MB
+		if (freeSpace < 0x8000) // 16MB (32K sectors)
 		{
 			printf(pBad "Error #06: Insufficient SD card space!\n"
 				   pBad "At least 16MB is required, you have %.2fMB!", freeSpace / (float)0x100000);
