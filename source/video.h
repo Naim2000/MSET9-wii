@@ -9,6 +9,8 @@
 #define pInfo	"[--]	"
 #define pNote	"[\x1b[34;1m**\x1b[39m]	"
 
+extern int conX, conY;
+
 void init_video();
 void clear();
-void clearln();
+void clearln(char c);

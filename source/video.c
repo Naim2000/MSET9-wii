@@ -14,6 +14,8 @@
 static void* xfb = NULL;
 static GXRModeObj vmode = {};
 
+int conX, conY;
+
 // from LoadPriiloader
 __attribute__((constructor))
 void init_video() {
@@ -48,6 +50,8 @@ void init_video() {
              (vmode.viHeight + vmode.viYOrigin - CONSOLE_HEIGHT) / 2,
              CONSOLE_WIDTH, CONSOLE_HEIGHT, CONSOLE_WIDTH * VI_DISPLAY_PIX_SZ);
 
+	CON_GetMetrics(&conX, &conY);
+
 	VIDEO_ClearFrameBuffer(&vmode, xfb, COLOR_BLACK);
 	VIDEO_SetNextFramebuffer(xfb);
 	VIDEO_SetBlack(false);
@@ -63,14 +67,11 @@ void clear() {
 	fflush(stdout);
 }
 
-void clearln() {
-	int x, y;
-	CON_GetMetrics(&x, &y);
-
+void clearln(char c) {
 	putchar('\r');
-	for (int i = 1; i < x; i++)
-		putchar(' ');
+	for (int i = 1; i < conX; i++)
+		putchar(c ? c : ' ');
 
-	putchar('\r');
+	putchar(c ? '\n' : '\r');
 	fflush(stdout);
 }
