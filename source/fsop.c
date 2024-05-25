@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <string.h>
-#include <wchar.h>
+#include <ogc/machine/processor.h>
 #include <errno.h>
 
 #include "video.h"
 #include "fsop.h"
 #include "sha256.h"
+#include "firm.h"
+
+static unsigned char buffer[0x1000];
 
 bool CheckFile(const char* filepath, size_t filesize, bool verifySHA256) {
 	FRESULT fres = 0;
@@ -46,44 +49,105 @@ bool CheckFile(const char* filepath, size_t filesize, bool verifySHA256) {
 		}	
 	}
 
-	printf(pGood "	%s: File OK! %s\n", filepath, verifySHA256? "(Hash verified)" : "");
+	if (strrchr(filepath, '.') && !strcmp(strrchr(filepath, '.'), ".firm")) {
+		int res = VerifyFIRM(filepath);
+		if (res) {
+			printf(pBad "	%s: FIRM verification failed! (%i)\n", filepath, res);
+			return false;
+		}
+	}
+
+	printf(pGood "	%s: File OK!\n", filepath);
 	return true;
 }
 
+static SHA256_CTX sha256ctx = {};
+static UINT sha256hash_cb(const BYTE* data, UINT size) {
+	if (!size) return true;
+
+	sha256_update(&sha256ctx, data, size);
+	return size;
+}
+
+static FRESULT hashfile(FIL* fp, FSIZE_t offset, UINT size, unsigned char out[SHA256_BLOCK_SIZE]) {
+	FRESULT fres;
+	UINT forwarded;
+
+	fres = f_lseek(fp, offset);
+	if (fres) return fres;
+
+	sha256_init(&sha256ctx);
+	fres = f_forward(fp, sha256hash_cb, size, &forwarded);
+	sha256_final(&sha256ctx, out);
+
+	return fres;
+}
+
+int VerifyFIRM(const char* filepath) {
+	int res;
+	FIL fp[1];
+	FIRMHeader header[1];
+
+	res = f_open(fp, filepath, FA_READ);
+	if (res) return res;
+
+	UINT read;
+	res = f_read(fp, header, sizeof(FIRMHeader), &read);
+	if (read != sizeof(FIRMHeader)) {
+		f_close(fp);
+		if (!res) res = ~32;
+		return res;
+	}
+
+	if (memcmp(header->magic, "FIRM", 4) != 0) {
+		f_close(fp);
+		return ~7;
+	}
+
+	for (FIRMSection* sect = header->sections; sect < header->sections + 4; sect++) {
+		uint32_t size, offset;
+		size = __lwbrx(sect, offsetof(FIRMSection, size));
+		offset = __lwbrx(sect, offsetof(FIRMSection, offset));
+		unsigned char hash[SHA256_BLOCK_SIZE] = {};
+
+		if (!size) continue;
+
+		res = hashfile(fp, offset, size, hash);
+		if (res) break;
+
+		if (memcmp(sect->hash, hash, SHA256_BLOCK_SIZE) != 0) {
+			res = ~48;
+			break;
+		}
+	}
+	f_close(fp);
+
+	return res;
+}
+
 VRESULT VerifyHash(const char* filepath) {
-	static unsigned char buffer[0x1000];
 	char path[100];
-	FIL fp = {}, fp_sha = {};
 	FRESULT fres = 0;
+	FIL fp = {}, fp_sha = {};
+	unsigned char hashA[SHA256_BLOCK_SIZE] = {};
+	unsigned char hashB[SHA256_BLOCK_SIZE] = {};
 
 	fres = f_open(&fp, filepath, FA_READ);
 	if (fres != FR_OK) return VR_NO_FILE;
 
-	unsigned char hashCalc[SHA256_BLOCK_SIZE] = {};
-	SHA256_CTX sha = {};
-	sha256_init(&sha);
-
-	while (true) {
-		UINT read = 0;
-		fres = f_read(&fp, buffer, sizeof(buffer), &read);
-		if (fres != FR_OK || !read) break;
-		sha256_update(&sha, buffer, read);
-	}
-
-	sha256_final(&sha, hashCalc);
+	hashfile(&fp, 0, -1, hashA);
 	f_close(&fp);
 
 	sprintf(path, "%s.sha", filepath);
 	fres = f_open(&fp_sha, path, FA_READ);
 	if (fres != FR_OK) return VR_NO_HASHFILE;
 
-	unsigned char hash[SHA256_BLOCK_SIZE] = {};
 	UINT read = 0;
-	fres = f_read(&fp_sha, hash, sizeof(hash), &read);
+	fres = f_read(&fp_sha, hashB, sizeof(hashB), &read);
 	f_close(&fp_sha);
 
-	if (read != sizeof(hash)) return VR_NO_HASHFILE;
-	else if (memcmp(hashCalc, hash, sizeof(hash)) != 0) return VR_MISMATCH;
+	if (read != sizeof(hashB)) return VR_NO_HASHFILE;
+	else if (memcmp(hashA, hashB, sizeof(hashB)) != 0) return VR_MISMATCH;
 
 	return VR_OK;
 }
@@ -116,13 +180,14 @@ FRESULT f_rmdir_r(const TCHAR* path) {
 
 FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst) {
 	TCHAR src_b[256], dst_b[256];
+	static unsigned char buffer[0x4000] __aligned(0x40);
 
 	FRESULT fres;
 	FIL fp[2] = {};
 	DIR dp = {};
 	FILINFO st[1] = {};
 
-	puts(dst);
+//	puts(dst);
 
 	fres = f_mkdir(dst);
 	if (fres != FR_OK && fres != FR_EXIST) return fres;
@@ -145,9 +210,22 @@ FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst) {
 		fres = f_open(&fp[0], src_b, FA_READ);
 		if (fres != FR_OK) break;
 
-		fres = f_open(&fp[1], dst_b, FA_WRITE);
+		fres = f_open(&fp[1], dst_b, FA_WRITE | FA_CREATE_NEW);
 		if (fres != FR_OK) goto close;
 
+		UINT read, written, total = 0;
+		while (true)
+		{
+			fres = f_read(&fp[0], buffer, sizeof(buffer), &read);
+			if (fres || !read) break;
+
+			fres = f_write(&fp[1], buffer, read, &written);
+			total += written;
+			if (fres || written != read) break;
+		}
+
+// i don't love executable stack sorry
+#if 0
 		// i love executable stack
 		UINT forward_cb(const BYTE* data, UINT len)
 		{
@@ -161,11 +239,12 @@ FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst) {
 
 		UINT written;
 		fres = f_forward(&fp[0], forward_cb, st->fsize, &written);
+#endif
 
 	close:
 		f_close(&fp[0]);
 		f_close(&fp[1]);
-		if (fres == FR_OK && written != st->fsize) fres = FR_DENIED;
+		if (fres == FR_OK && total != st->fsize) fres = FR_DENIED;
 		if (fres != FR_OK) break;
 	}
 	f_closedir(&dp);
