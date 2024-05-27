@@ -29,15 +29,16 @@ typedef const struct N3DSRegion
 	char name[4];
 	uint32_t homeMenuExtData;
 	uint32_t MiiMakerExtData;
+	uint32_t MiiPlazaExtData;
 } N3DSRegion;
 
 static N3DSRegion N3DSRegions[NBR_REGIONS] = {
-	{ "USA", 0x8F, 0x217 },
-	{ "EUR", 0x98, 0x227 },
-	{ "JPN", 0x82, 0x207 },
-	{ "CHN", 0xA1, 0x267 },
-	{ "KOR", 0xA9, 0x277 },
-	{ "TWN", 0xB1, 0x287 },
+	{ "USA", 0x8F, 0x217, 0x218 },
+	{ "EUR", 0x98, 0x227, 0x228 },
+	{ "JPN", 0x82, 0x207, 0x208 },
+	{ "CHN", 0xA1, 0x267, -1 },
+	{ "KOR", 0xA9, 0x277, -1 },
+	{ "TWN", 0xB1, 0x287, -1 },
 };
 
 const char* const haxid1[4] = {
@@ -55,14 +56,8 @@ const char* const haxid1[4] = {
 
 };
 
-typedef enum MSET9Status {
-	NOT_READY,
-	READY,
-	JUST_REMOVED,
-} MSET9Status;
-
 struct MSET9 {
-	MSET9Status status;
+	bool ready;
 	MSET9Version consoleVer;
 	N3DSRegion* region;
 	char ID[2][32 +1];
@@ -170,7 +165,7 @@ bool MSET9Start() {
 		return false;
 	}
 	else if (foundID1 > 1) {
-		printf(pBad "You have multiple (%i) ID1's!\n"
+		printf(pBad "Error #12: You have multiple (%i) ID1's!\n"
 			   pBad "Consult: https://wiki.hacks.guide/wiki/3DS:MID1\n", foundID1);
 
 		return false;
@@ -197,16 +192,15 @@ bool MSET9Start() {
 		f_chdir("sdmc:/");
 
 		puts(pGood "MSET9 has been removed!");
-		mset9.status = JUST_REMOVED;
 		return false;
 	}
 
-	mset9.status = READY;
+	mset9.ready = true;
 	return true;
 }
 
 bool MSET9SetConsoleVer(MSET9Version consoleVer) {
-	if (!mset9.status) return false;
+	if (!mset9.ready) return false;
 
 	mset9.consoleVer = consoleVer;
 	return true;
@@ -215,7 +209,7 @@ bool MSET9SetConsoleVer(MSET9Version consoleVer) {
 bool MSET9SanityCheck(void) {
 	char path[256];
 
-	if (!mset9.status) return false;
+	if (!mset9.ready) return false;
 
 	puts(pNote "Performing sanity checks...");
 
@@ -283,8 +277,12 @@ bool MSET9SanityCheck(void) {
 	}
 
 	if (!mset9.region) {
-		puts(pBad "Error #04: No HOME menu extdata found!\n"
-			 pBad "Is your console reading your SD card?");
+		puts(pBad "Error #04: No HOME menu extdata found!\n\n"
+
+			pNote "How to reset HOME menu management info:\n"
+			pNote "Power on your console while holding L+R+Down+B.\n"
+		);
+
 		return false;
 	}
 
@@ -292,6 +290,12 @@ bool MSET9SanityCheck(void) {
 	sprintf(extDataPath, "extdata/00000000/%08x", mset9.region->MiiMakerExtData);
 	if (f_stat(extDataPath, 0) != FR_OK) {
 		puts(pBad "Error #05: No Mii Maker extdata found!");
+
+		sprintf(strrchr(extDataPath, '/'), "/%08x", mset9.region->MiiPlazaExtData);
+		if (f_stat(extDataPath, 0) == FR_OK) {
+			puts(pWarn "Please make sure you are opening Mii Maker and not Mii Plaza!");
+		}
+
 		return false;
 	}
 	puts(pGood "Found Mii Maker extdata!");
@@ -305,7 +309,7 @@ bool MSET9Injection(void) {
 	FRESULT fres;
 	FIL fp;
 
-	if (!mset9.status || !mset9.consoleVer) return false;
+	if (!mset9.ready || !mset9.consoleVer) return false;
 
 	puts(pNote "Performing injection...");
 
