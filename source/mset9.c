@@ -240,17 +240,18 @@ bool MSET9SanityCheck(void) {
 	{
 		puts(pNote "Information #10: No title database!\n");
 
-		FIL db = {};
 		FRESULT fres = f_mkdir("dbs");
 		if (fres != FR_OK && fres != FR_EXIST) {
 			printf("f_mkdir failed! (%i)\n", fres);
 			return false;
 		}
 
-		if (f_open(&db, "dbs/import.db", FA_CREATE_NEW | FA_WRITE) == FR_OK) f_close(&db);
-		if (f_open(&db, "dbs/title.db",  FA_CREATE_NEW | FA_WRITE) == FR_OK) f_close(&db);
+		f_dummy("dbs/title.db", true);
+		f_dummy("dbs/import.db", true);
 
-		puts(pInfo "Please reset the title database by navigating to\n"
+		puts(pNote "Created empty databases.\n\n"
+
+			 pInfo "Please initialize the title database by navigating to\n"
 			 pInfo "	System Settings -> Data Management -> Nintendo 3DS\n"
 			 pInfo "	-> Software -> Reset, then re-run the installer.\n\n"
 

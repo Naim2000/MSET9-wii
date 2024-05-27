@@ -10,7 +10,7 @@
 
 static unsigned char buffer[0x4000] __aligned(0x40);
 
-bool CheckFile(const char* filepath, size_t filesize, bool verifySHA256) {
+bool CheckFile(const TCHAR* filepath, size_t filesize, bool verifySHA256) {
 	FRESULT fres = 0;
 	FILINFO st = {};
 	FIL fp = {};
@@ -91,7 +91,7 @@ static FRESULT hashfile(FIL* fp, FSIZE_t offset, UINT size, unsigned char out[SH
 	return fres;
 }
 
-int VerifyFIRM(const char* filepath) {
+int VerifyFIRM(const TCHAR* filepath) {
 	int res;
 	FIL fp[1];
 	FIRMHeader header[1];
@@ -113,10 +113,9 @@ int VerifyFIRM(const char* filepath) {
 	}
 
 	for (FIRMSection* sect = header->sections; sect < header->sections + 4; sect++) {
-		uint32_t size, offset;
-		size = __lwbrx(sect, offsetof(FIRMSection, size));
-		offset = __lwbrx(sect, offsetof(FIRMSection, offset));
 		unsigned char hash[SHA256_BLOCK_SIZE] = {};
+		uint32_t size = __lwbrx(sect, offsetof(FIRMSection, size));
+		uint32_t offset = __lwbrx(sect, offsetof(FIRMSection, offset));
 
 		if (!size) continue;
 
@@ -133,8 +132,8 @@ int VerifyFIRM(const char* filepath) {
 	return res;
 }
 
-VRESULT VerifyHash(const char* filepath) {
-	char path[100];
+VRESULT VerifyHash(const TCHAR* filepath) {
+	TCHAR path[160];
 	FRESULT fres = 0;
 	FIL fp = {}, fp_sha = {};
 	unsigned char hashA[SHA256_BLOCK_SIZE] = {};
@@ -161,7 +160,7 @@ VRESULT VerifyHash(const char* filepath) {
 }
 
 FRESULT f_rmdir_r(const TCHAR* path) {
-	TCHAR path_b[256];
+	TCHAR path_b[384];
 
 	FRESULT fres;
 	DIR dp = {};
@@ -187,7 +186,7 @@ FRESULT f_rmdir_r(const TCHAR* path) {
 }
 
 FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst) {
-	TCHAR src_b[256], dst_b[256];
+	TCHAR src_b[384], dst_b[384];
 
 	FRESULT fres;
 	FIL fp[2] = {};
@@ -256,5 +255,13 @@ FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst) {
 	}
 	f_closedir(&dp);
 
+	return fres;
+}
+
+FRESULT f_dummy(const TCHAR* path, bool force) {
+	FIL fp;
+
+	FRESULT fres = f_open(&fp, path, FA_WRITE | (force ? FA_CREATE_ALWAYS : FA_CREATE_NEW));
+	f_close(&fp);
 	return fres;
 }
