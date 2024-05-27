@@ -8,11 +8,12 @@
 #include "sha256.h"
 #include "firm.h"
 
-static unsigned char buffer[0x1000];
+static unsigned char buffer[0x4000] __aligned(0x40);
 
 bool CheckFile(const char* filepath, size_t filesize, bool verifySHA256) {
 	FRESULT fres = 0;
-	static FILINFO st = {};
+	FILINFO st = {};
+	FIL fp = {};
 
 	fres = f_stat(filepath, &st);
 	if (fres == FR_NO_FILE || fres == FR_NO_PATH) {
@@ -29,13 +30,20 @@ bool CheckFile(const char* filepath, size_t filesize, bool verifySHA256) {
 		return false;
 	}
 
+	fres = f_open(&fp, filepath, FA_READ | (FA_OPEN_APPEND & ~FA_OPEN_ALWAYS));
+	f_close(&fp);
+	if (fres != FR_OK) {
+		printf(pBad "	%s: Failed to open file! Is the file broken?\n", filepath);
+		return false;
+	}
+
 	// Should at least have a size
 	if (!st.fsize) {
 		printf(pBad "	%s: File has no size! Was it closed properly?\n", filepath);
 		return false;
 	}
 
-	if (filesize && st.fsize != filesize) {
+	else if (filesize && st.fsize != filesize) {
 		float mb_filesize = filesize / 1048576.f, mb_stfilesize = st.fsize / 1048576.f;
 		printf(pBad "	%s: File size incorrect! (expected %.2fMB, is %.2fMB)\n", filepath, mb_filesize, mb_stfilesize);
 		return false;
@@ -180,7 +188,6 @@ FRESULT f_rmdir_r(const TCHAR* path) {
 
 FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst) {
 	TCHAR src_b[256], dst_b[256];
-	static unsigned char buffer[0x4000] __aligned(0x40);
 
 	FRESULT fres;
 	FIL fp[2] = {};
