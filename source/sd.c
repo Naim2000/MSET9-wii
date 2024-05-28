@@ -11,17 +11,19 @@
 static bool sdMounted = false;
 static const DISC_INTERFACE* sdmc = &__io_wiisd;
 static FATFS fs = {};
+// TODO
+// static uint32_t sdcard_CID[4] __aligned(0x20);
 
 bool SDMount(void) {
 	if (sdMounted) return true;
 
 	sdmc->startup();
 
-	char spin[] = "|/-\\";
-	char* p = spin;
+	const char spin[] = "|/-\\";
+	const char* p = spin;
 	bool inserted = sdmc->isInserted();
 	while (!inserted) {
-		printf(pWarn "Please insert your SD card. [%c]\r", *p++);
+		printf(pWarn "Please insert your SD card. [%c] (Press HOME to cancel)\r", *p++);
 		scanpads();
 		if (buttons_down(WPAD_BUTTON_HOME)) break;
 
@@ -36,7 +38,7 @@ bool SDMount(void) {
 	clearln(0);
 
 	if (!inserted) {
-		printf(pBad "No SD card inserted!\n");
+		puts(pWarn "Operation cancelled by user...");
 		return false;
 	}
 
@@ -48,6 +50,7 @@ bool SDMount(void) {
 
 		puts(pGood "Mounting sdmc:/ OK!");
 		sdMounted = true;
+		// WiiSD_GetCID(&sdcard_CID);
 
 		if (totalSpace < 0x400000) // 2GB (4M sectors)
 		{
@@ -73,7 +76,40 @@ bool SDMount(void) {
 }
 
 void SDUnmount(void) {
-	if (sdMounted) f_unmount("sdmc:/");
-	sdmc->shutdown();
-	sdMounted = false;
+	if (sdMounted) {
+
+		f_unmount("sdmc:/");
+	// sdmc->shutdown();
+		puts(pInfo "Unmounted SD card.");
+		sdMounted = false;
+	}
+}
+
+bool SDRemount(void) {
+	SDUnmount();
+
+	const char spin[] = "|/-\\";
+	const char* p = spin;
+	bool inserted = sdmc->isInserted();
+	while (inserted) {
+		printf(pWarn "Eject your SD card! [%c] (Press HOME to cancel)\r", *p++);
+		scanpads();
+		if (buttons_down(WPAD_BUTTON_HOME)) break;
+
+		if (!*p) {
+			p = spin;
+			sdmc->startup();
+			inserted = sdmc->isInserted();
+		}
+
+		usleep(100000);
+	}
+
+	clearln(0);
+	if (inserted) return false;
+
+	puts(pGood "SD card ejected.");
+	sleep(10);
+
+	return SDMount();
 }

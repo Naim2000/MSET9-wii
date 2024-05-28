@@ -7,10 +7,9 @@ typedef enum MSET9Version {
 	N3DS_11_4_11_7  = 4,
 } MSET9Version;
 
-// Identify the user's ID0 and ID1.
-bool MSET9Start(void);
+// Identify the user's ID0 and ID1. Removes mset9 automatically if present.
+int MSET9Start(void);
 
-// This should check if the user has selected the correct console version. (If mset9 is already present)
 bool MSET9SetConsoleVer(MSET9Version);
 
 // Check extracted files, HOME menu/Mii maker extdata, etc.

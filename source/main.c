@@ -75,15 +75,29 @@ int main(void) {
 
 	MSET9SetConsoleVer((MSET9Version)consoleVer);
 
-	PrintHeader();
-	if (MSET9SanityCheck()) {
-		printf(pNote "Selected console version: %s\n", shortNames[consoleVer - 1]);
-		printf(pNote "Inject MSET9 now?\n\n"
+	while (true) {
+		PrintHeader();
+		if (MSET9SanityCheck()) {
+			printf(pNote "Selected console version: %s\n", shortNames[consoleVer - 1]);
+			printf(pNote "Inject MSET9 now?\n\n"
 
-			   pInfo "Press + to confirm.\n"
-			   pInfo "Press any other button to cancel.\n");
-		wait_button(0);
-		if (buttons_down(WPAD_BUTTON_PLUS)) MSET9Injection();
+				   pInfo "Press (A) to confirm.\n"
+				   pInfo "Press [B] to cancel.\n");
+			wait_button(WPAD_BUTTON_A | WPAD_BUTTON_B | WPAD_BUTTON_HOME);
+			if (buttons_down(WPAD_BUTTON_A)) MSET9Injection();
+		}
+		if (!SDRemount()) break;
+		PrintHeader();
+		int ret = MSET9Start();
+		if (!ret) break;
+		else if (ret == 2) {
+			printf(pWarn "Try again?\n\n"
+
+				   pInfo "Press (A) to confirm.\n"
+				   pInfo "Press [B] to cancel.\n");
+			wait_button(WPAD_BUTTON_A | WPAD_BUTTON_B | WPAD_BUTTON_HOME);
+			if (!buttons_down(WPAD_BUTTON_A)) break;
+		}
 	}
 
 exit:

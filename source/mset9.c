@@ -82,7 +82,7 @@ static bool isHaxID1(const char* name) {
 	return (bool)strstr(name, "sdmc");
 }
 
-bool MSET9Start() {
+int MSET9Start() {
 	char path[256] = "sdmc:/Nintendo 3DS";
 	FRESULT fres = 0;
 	DIR dp = {};
@@ -192,7 +192,7 @@ bool MSET9Start() {
 		f_chdir("sdmc:/");
 
 		puts(pGood "MSET9 has been removed!");
-		return false;
+		return 2;
 	}
 
 	mset9.ready = true;
@@ -225,7 +225,7 @@ bool MSET9SanityCheck(void) {
 
 		return false;
 	}
-	puts(pGood "Extracted files look good!\n");
+	puts(pGood "Extracted files look good!");
 
 	sprintf(path, "sdmc:/Nintendo 3DS/%.32s/%.32s/", mset9.ID[0], mset9.ID[1]);
 	FRESULT fres = f_chdir(path);
