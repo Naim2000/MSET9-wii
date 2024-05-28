@@ -103,7 +103,7 @@ int MSET9Start() {
 	while ((fres = f_readdir(&dp, &fl)) == FR_OK && fl.fname[0]) {
 		if (is3DSID(fl.fname)) {
 			printf(pInfo "Found ID0: %s\n", fl.fname);
-			strncpy(mset9.ID[0], fl.fname, 32);
+			memcpy(mset9.ID[0], fl.fname, 32);
 			foundID0++;
 		}
 	}
@@ -136,7 +136,7 @@ int MSET9Start() {
 	while ((fres = f_readdir(&dp, &fl)) == FR_OK && fl.fname[0]) {
 		if (is3DSID(fl.fname) || isBackupID1(fl.fname)) {
 			printf(pInfo "Found ID1: %s\n", fl.fname);
-			strncpy(mset9.ID[1], fl.fname, 32);
+			memcpy(mset9.ID[1], fl.fname, 32);
 			mset9.hasBackupID1 = isBackupID1(fl.fname);
 			foundID1++;
 		}
@@ -280,8 +280,8 @@ bool MSET9SanityCheck(void) {
 	if (!mset9.region) {
 		puts(pBad "Error #04: No HOME menu extdata found!\n\n"
 
-			pNote "How to reset HOME menu management info:\n"
-			pNote "Power on your console while holding L+R+Down+B.\n"
+			pNote "TIP: Power on your console while holding L+R+Down+B.\n"
+			pNote "You should be prompted to reset the HOME menu management info."
 		);
 
 		return false;

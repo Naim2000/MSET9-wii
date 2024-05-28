@@ -42,13 +42,13 @@ bool SDMount(void) {
 		return false;
 	}
 
-	printf(pInfo "Mounting sdmc:/ ...\r");
+	printf(pInfo "Mounting SD card ...\r");
 	FRESULT fres = f_mount(&fs, "sdmc:/", true);
 	if (fres == FR_OK) {
 		unsigned long freeSpace = (fs.free_clst * fs.csize);
 		unsigned long totalSpace = ((fs.n_fatent - 2) * fs.csize);
 
-		puts(pGood "Mounting sdmc:/ OK!");
+		puts(pGood "Mounting SD card OK!");
 		sdMounted = true;
 		// WiiSD_GetCID(&sdcard_CID);
 
@@ -69,7 +69,7 @@ bool SDMount(void) {
 
 	}
 	else {
-		printf(pBad "Mounting sdmc:/ failed! (%i)\n", fres);
+		printf(pBad "Mounting SD card failed! (%i)\n", fres);
 	}
 
 	return sdMounted;
@@ -108,7 +108,7 @@ bool SDRemount(void) {
 	clearln(0);
 	if (inserted) return false;
 
-	puts(pGood "SD card ejected.");
+	puts(pGood "Ejected SD card.");
 	sleep(10);
 
 	return SDMount();

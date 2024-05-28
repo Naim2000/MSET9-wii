@@ -65,7 +65,7 @@ bool CheckFile(const TCHAR* filepath, size_t filesize, bool verifySHA256) {
 		}
 	}
 
-//	printf(pGood "	%s: File OK!\n", filepath);
+	printf(pGood "	%s: File OK!\n", filepath);
 	return true;
 }
 

@@ -37,6 +37,7 @@ int main(void) {
 		 "	               New 3DS has 4 shoulder buttons (L, R, ZL, ZR)\n\n"
 
 		 "	Console Version: Displayed on the main page of System Settings.\n"
+		 "	                 Eg. \"Ver. 11.17.0-50J\"\n"
 	);
 	const char* const options[4] = {
 		"Old 3DS/Old 3DS XL/Old 2DS,    11.8 up to 11.17 (latest!)",
