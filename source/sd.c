@@ -19,26 +19,24 @@ bool SDMount(void) {
 
 	sdmc->startup();
 
+
 	const char spin[] = "|/-\\";
 	const char* p = spin;
 	bool inserted = sdmc->isInserted();
 	while (!inserted) {
-		printf(pWarn "Please insert your SD card. [%c] (Press HOME to cancel)\r", *p++);
+		printf(pWarn "Insert your SD card, then press (A) to continue. [%c]\r", *p++);
 		scanpads();
-		if (buttons_down(WPAD_BUTTON_HOME)) break;
+		if (buttons_down(WPAD_BUTTON_A)) break;
 
-		if (!*p) {
-			p = spin;
-			sdmc->startup();
-			inserted = sdmc->isInserted();
-		}
+		if (!*p) p = spin;
 
 		usleep(100000);
 	}
 	clearln(0);
 
-	if (!inserted) {
-		puts(pWarn "Operation cancelled by user...");
+	if (!sdmc->isInserted()) {
+	//	puts(pWarn "Operation cancelled by user...");
+		puts(pBad "No SD card inserted?");
 		return false;
 	}
 
@@ -54,15 +52,16 @@ bool SDMount(void) {
 
 		if (totalSpace < 0x400000) // 2GB (4M sectors)
 		{
-			printf(pWarn "Your SD card is under 2GB? (%luMB)\n", totalSpace / 0x100000);
+			printf(pWarn "Your SD card is under 2GB? (%luMB)\n", totalSpace / 0x800);
 			sleep(2);
 		}
 
 
-		if (freeSpace < 0x8000) // 16MB (32K sectors)
+		if (freeSpace < 0x8000)
 		{
 			printf(pBad "Error #06: Insufficient SD card space!\n"
-				   pBad "At least 16MB is required, you have %.2fMB!", freeSpace / (float)0x100000);
+					// Double, because if we inject MSET9 and dip below 16MB wel'll have trouble uninjecting it
+				   pBad "At least 512 blocks (32MB) are required, you have %lu!", freeSpace / 0x100);
 
 			SDUnmount();
 		}
@@ -109,7 +108,7 @@ bool SDRemount(void) {
 	if (inserted) return false;
 
 	puts(pGood "Ejected SD card.");
-	sleep(10);
+	sleep(5);
 
 	return SDMount();
 }
