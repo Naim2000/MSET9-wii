@@ -83,7 +83,7 @@ static bool isHaxID1(const char* name) {
 }
 
 int MSET9Start() {
-	char path[256] = "sdmc:/Nintendo 3DS";
+	char path[256] = "0:/Nintendo 3DS";
 	FRESULT fres = 0;
 	DIR dp = {};
 	FILINFO fl = {};
@@ -180,7 +180,7 @@ int MSET9Start() {
 		if ((fres = f_rename(backupID1name, mset9.ID[1])) != FR_OK) {
 			printf(pWarn "Failed to restore backed up ID1 ..? (%i)\n", fres);
 		}
-		f_chdir("sdmc:/");
+		f_chdir("0:/");
 	}
 
 	if (injectedConsoleVer >= 0) {
@@ -189,7 +189,7 @@ int MSET9Start() {
 		if ((fres = f_rmdir_r(curhaxID1)) != FR_OK) {
 			printf(pWarn "Failed to remove hax ID1 ..? (%i)\n", fres);
 		}
-		f_chdir("sdmc:/");
+		f_chdir("0:/");
 
 		puts(pGood "MSET9 has been removed!");
 		return 2;
@@ -221,13 +221,14 @@ bool MSET9SanityCheck(void) {
 	||	!CheckFile("/SafeB9S.bin", 0, false))
 	{
 		puts(pBad  "Error #08: One or more files are missing or malformed!");
-		puts(pInfo "Please re-extract the MSET9 zip file, overwriting any files when prompted.");
+		puts(pInfo "Please re-extract the MSET9 zip file, \n"
+			 pInfo "overwriting any files when prompted.");
 
 		return false;
 	}
 	puts(pGood "Extracted files look good!");
 
-	sprintf(path, "sdmc:/Nintendo 3DS/%.32s/%.32s/", mset9.ID[0], mset9.ID[1]);
+	sprintf(path, "0:/Nintendo 3DS/%.32s/%.32s/", mset9.ID[0], mset9.ID[1]);
 	FRESULT fres = f_chdir(path);
 	if (fres != FR_OK) {
 		printf("f_chdir failed? (%i)\n", fres);
@@ -301,20 +302,20 @@ bool MSET9SanityCheck(void) {
 	}
 	puts(pGood "Found Mii Maker extdata!");
 
-	f_chdir("sdmc:/");
+	f_chdir("0:/");
 	return true;
 }
 
 bool MSET9Injection(void) {
 	char path[256], path2[256];
 	FRESULT fres;
-	FIL fp;
+//	FIL fp;
 
 	if (!mset9.ready || !mset9.consoleVer) return false;
 
 	puts(pNote "Performing injection...");
 
-	sprintf(path, "sdmc:/Nintendo 3DS/%.32s/", mset9.ID[0]);
+	sprintf(path, "0:/Nintendo 3DS/%.32s/", mset9.ID[0]);
 	f_chdir(path);
 
 	// 1. Create hax ID1
@@ -382,16 +383,16 @@ bool MSET9Injection(void) {
 	// 4. Create trigger file (002F003A.txt)
 	puts(pInfo "Injecting trigger file...");
 	strcpy(strchr(path, '/'), "/extdata/002F003A.txt");
-	fres = f_open(&fp, path, FA_CREATE_NEW | FA_WRITE);
+	fres = f_dummy(path, false);
 	if (fres != FR_OK) {
-		printf(pBad "f_open failed! (%i)\n", fres);
+		printf(pBad "f_dummy failed! (%i)\n", fres);
 		return false;
 	}
-
+/*
 	UINT written;
 	fres = f_write(&fp, "arm9 \"security\" processor vs. text file in extdata:", 52, &written);
 	f_close(&fp);
-
+*/
 	// 5. Back up original ID1
 	puts(pInfo "Backing up original ID1...");
 	strcpy(path,  mset9.ID[1]);
@@ -404,6 +405,7 @@ bool MSET9Injection(void) {
 		return false;
 	}
 
+	f_chdir("0:/");
 	puts(pGood "MSET9 injected, have fun!");
 	return true;
 }

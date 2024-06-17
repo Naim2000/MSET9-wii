@@ -45,7 +45,7 @@ bool SDMount(void) {
 	printf(pInfo "Mounting SD card ...\r");
 	// usleep(1000000);
 	sdmc->startup();
-	FRESULT fres = f_mount(&fs, "sdmc:/", true);
+	FRESULT fres = f_mount(&fs, "0:/", true);
 	if (fres == FR_OK) {
 		unsigned long freeSpace = (fs.free_clst * fs.csize);
 		unsigned long totalSpace = ((fs.n_fatent - 2) * fs.csize);
@@ -79,7 +79,7 @@ bool SDMount(void) {
 
 void SDUnmount(void) {
 	if (sdMounted) {
-		f_unmount("sdmc:/");
+		f_unmount("0:/");
 		// sdmc->shutdown();
 		puts(pInfo "Unmounted SD card.");
 		sdMounted = false;

@@ -79,13 +79,26 @@ static UINT sha256hash_cb(const BYTE* data, UINT size) {
 
 static FRESULT hashfile(FIL* fp, FSIZE_t offset, UINT size, unsigned char out[SHA256_BLOCK_SIZE]) {
 	FRESULT fres;
-	UINT forwarded;
+	UINT left = size;
 
 	fres = f_lseek(fp, offset);
 	if (fres) return fres;
 
 	sha256_init(&sha256ctx);
+	/*
+	ok this thing seems really slow
+
 	fres = f_forward(fp, sha256hash_cb, size, &forwarded);
+	*/
+	while (left)
+	{
+		UINT btr = (left > sizeof(buffer)) ? sizeof(buffer) : left;
+		UINT read;
+		fres = f_read(fp, buffer, btr, &read);
+		if (fres || !read) break;
+		left -= sha256hash_cb(buffer, read);
+	}
+
 	sha256_final(&sha256ctx, out);
 
 	return fres;
