@@ -60,15 +60,6 @@ bool SDMount(void) {
 			usleep(2000000);
 		}
 
-
-		if (freeSpace < 0x8000) // 16MB (32K sectors)
-		{
-			printf(pBad "Error #06: Insufficient SD card space!\n"
-				   pBad "At least 512 blocks (32MB) are required, you have %lu!", freeSpace / 0x100);
-
-			SDUnmount();
-		}
-
 	}
 	else {
 		printf(pBad "Mounting SD card failed! (%i)\n", fres);

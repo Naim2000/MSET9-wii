@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <gccore.h>
 #include <wiiuse/wpad.h>
 
@@ -22,13 +23,50 @@ static void PrintHeader(void) {
 	clearln('\315');
 }
 
+static int SelectionMenu(const char* const options[], int count) {
+	int posX, posY, selected = 0;
+	CON_GetPosition(&posX, &posY);
+
+	while (true) {
+		printf("\x1b[%i;0H", posY);
+		for (int i = 0; i < count; i++)
+			printf("	%s %s%s\n", i == selected ? "\x1b[47;1m\x1b[30m>>" : "  ", options[i], i == selected ? "\x1b[40m\x1b[39m" : "");
+
+		wait_button(0);
+
+		if (buttons_down(WPAD_BUTTON_UP)) {
+			if (!selected--)
+				selected = count - 1;
+			continue;
+		}
+
+		else if (buttons_down(WPAD_BUTTON_DOWN)) {
+			if (++selected == count)
+				selected = 0;
+			continue;
+		}
+
+		else if (buttons_down(WPAD_BUTTON_A)) {
+			selected++;
+			break;
+		}
+
+		else if (buttons_down(WPAD_BUTTON_B | WPAD_BUTTON_HOME)) {
+			selected = -1;
+			break;
+		}
+	}
+
+	putchar('\n');
+	putchar('\n');
+	return selected;
+}
+
 int main(void) {
 	initpads();
 	if (!SDMount()) goto exit;
 
-	if (!MSET9Start()) goto exit;
-
-	int consoleVer = 0;
+	if (!MSET9Start() || !MSET9SanityCheckA()) goto exit;
 
 	PrintHeader();
 	puts("\n"
@@ -52,53 +90,106 @@ int main(void) {
 		"New 3DS, 11.4 up to 11.7"
 	};
 
-	int posX, posY;
-	CON_GetPosition(&posX, &posY);
+	int consoleVer = SelectionMenu(options, 4);
 
-	while (true) {
+	if (consoleVer < 0)
+		goto exit;
 
-		printf("\x1b[%i;0H", posY);
-		for (int ii = 0; ii < 4; ii++)
-			printf("	%s %s\x1b[40m\x1b[39m\n", ii == consoleVer ? "\x1b[47;1m\x1b[30m>>" : "  ", options[ii]);
+	PrintHeader();
+	if (!mset9.hasHaxID1) { // Create hax ID1
+		puts(
+			"\x1b[41;39m=== !! DISCLAIMER !! ===\x1b[40m\x1b[39m\n\n"
+
+			"This process will temporarily reset all your 3DS data.\n"
+			"All your applications and themes will disappear.\n"
+			"This is perfectly normal, and if everything goes right. it will re-appear\n"
+			"at the end of the process.\n\n"
+
+			"In any case, it is highly recommended to make a backup of your SD card's\n"
+			"contents to a folder on your PC.\n"
+			"(Especially the 'Nintendo 3DS' folder.)\n"
+		);
+
+		sleep(7);
+
+		puts("Press (+) to confirm.\n"
+			 "Press any other button to cancel.\n");
 
 		wait_button(0);
+		if (buttons_down(WPAD_BUTTON_PLUS))
+			MSET9CreateHaxID1((MSET9Version)consoleVer);
 
-		if (buttons_down(WPAD_BUTTON_UP)) { if (!consoleVer--) consoleVer = 3; continue; }
+		goto exit;
+	}
+	else if (mset9.consoleVer != consoleVer) {
+		puts(pBad "Error #03: Don't change console model/version during MSET9!\n");
 
-		else if (buttons_down(WPAD_BUTTON_DOWN)) { if (++consoleVer == 4) consoleVer = 0; continue; }
+		printf("Earlier, you selected: '%s'!\n", shortNames[mset9.consoleVer]);
+		printf("Are you sure you want to switch to: '%s'?\n\n", shortNames[consoleVer]);
 
-		else if (buttons_down(WPAD_BUTTON_A)) { consoleVer++; break; }
+		sleep(3);
 
-		else if (buttons_down(WPAD_BUTTON_B | WPAD_BUTTON_HOME)) { consoleVer = 0; break; }
+		puts("Press (+) to confirm.\n"
+			 "Press any other button to cancel.\n");
+
+		wait_button(0);
+		if (!buttons_down(WPAD_BUTTON_PLUS))
+			goto exit;
+
+		MSET9CreateHaxID1((MSET9Version)consoleVer);
 	}
 
-	if (!consoleVer) goto exit;
-
-	MSET9SetConsoleVer((MSET9Version)consoleVer);
-
 	while (true) {
-		PrintHeader();
-		if (MSET9SanityCheck()) {
-			printf(pNote "Selected console version: %s\n", shortNames[consoleVer - 1]);
+		if (mset9.hasTriggerFile) {
+			MSET9Injection(false);
+			puts(pWarn "Try again?\n\n"
+
+				 pInfo "Press (+) to try again.\n"
+				 pInfo "Press (-) to remove MSET9.\n");
+
+			wait_button(WPAD_BUTTON_PLUS | WPAD_BUTTON_MINUS);
+			if (buttons_down(WPAD_BUTTON_MINUS)) {
+				MSET9Remove();
+				goto exit;
+			}
+		}
+		else if (mset9.homeExtdataOK && mset9.miiExtdataOK && mset9.titleDbsOK) {
+			printf(pNote "Selected console version: %s\n", shortNames[consoleVer]);
 			printf(pNote "Inject MSET9 now?\n\n"
 
 				   pInfo "Press (A) to confirm.\n"
 				   pInfo "Press [B] to cancel.\n");
 			wait_button(WPAD_BUTTON_A | WPAD_BUTTON_B | WPAD_BUTTON_HOME);
-			if (buttons_down(WPAD_BUTTON_A)) MSET9Injection();
+			if (buttons_down(WPAD_BUTTON_A)) MSET9Injection(true);
 		}
+		else {
+			if (!mset9.homeExtdataOK) {
+				puts(pBad  "HOME menu extdata: Missing!\n"
+					 pInfo "Please power on your console with your SD inserted, then try again.\n"
+					 pInfo "If this does not work, power it on while holding L+R+Down+B.\n");
+			}
+		//	else puts(pGood "HOME menu extdata: OK!\n");
+
+			if (!mset9.miiExtdataOK) {
+				puts(pBad  "Mii Maker extdata: Missing!\n"
+					 pInfo "Please power on your console with your SD inserted,\n"
+					 pInfo "then launch Mii Maker.\n");
+			}
+		//	else puts(pGood "Mii Maker extdata: OK!\n");
+
+			if (!mset9.titleDbsOK) {
+				puts(pBad  "Title database: Not initialized!\n"
+					 pInfo "Please power on your console with your SD inserted,\n"
+					 pInfo "open System Setttings, navigate to Data Management\n"
+					 pInfo "-> Nintendo 3DS -> Software, then select Reset.\n");
+		//	else puts(pGood "Title database: OK!");
+			}
+		}
+
 		if (!SDRemount()) break;
 		PrintHeader();
 		int ret = MSET9Start();
 		if (!ret) break;
-		else if (ret == 2) {
-			printf(pWarn "Try again?\n\n"
-
-				   pInfo "Press (A) to confirm.\n"
-				   pInfo "Press [B] to cancel.\n");
-			wait_button(WPAD_BUTTON_A | WPAD_BUTTON_B | WPAD_BUTTON_HOME);
-			if (!buttons_down(WPAD_BUTTON_A)) break;
-		}
 	}
 
 exit:
