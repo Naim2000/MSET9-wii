@@ -17,42 +17,41 @@ bool CheckFile(const TCHAR* filepath, size_t filesize, bool verifySHA256) {
 
 	fres = f_stat(filepath, &st);
 	if (fres == FR_NO_FILE || fres == FR_NO_PATH) {
-		printf(pBad "	%s: Does not exist on SD card!\n", filepath);
+		prbad("%s: Does not exist on SD card!", filepath);
 		return false;
 	}
 	else if (fres != FR_OK) {
-		printf(pBad "	%s: f_stat() failed (%i)\n", filepath, fres);
+		prbad("%s: f_stat() failed (%i)", filepath, fres);
 		return false;		
 	}
 
 	if (st.fattrib & AM_DIR) {
-		printf(pBad "	%s: Is a directory\n", filepath);
+		prbad("%s: Is a directory", filepath);
 		return false;
 	}
 
 	fres = f_open(&fp, filepath, FA_READ | (FA_OPEN_APPEND & ~FA_OPEN_ALWAYS));
 	f_close(&fp);
 	if (fres != FR_OK) {
-		printf(pBad "	%s: Failed to open file! Is the file broken?\n", filepath);
+		prbad("%s: Failed to open file! Is the file broken? (%i)", filepath, fres);
 		return false;
 	}
 
 	// Should at least have a size
 	if (!st.fsize) {
-		printf(pBad "	%s: File has no size! Was it closed properly?\n", filepath);
+		prbad("%s: File has no size! Was it closed properly?", filepath);
 		return false;
 	}
 
 	else if (filesize && st.fsize != filesize) {
-		float mb_filesize = filesize / 1048576.f, mb_stfilesize = st.fsize / 1048576.f;
-		printf(pBad "	%s: File size incorrect! (expected %.2fMB, is %.2fMB)\n", filepath, mb_filesize, mb_stfilesize);
+		prbad("%s: File size incorrect! (expected %#X, is %#X)", filepath, filesize, st.fsize);
 		return false;
 	}
 
 	if (verifySHA256) {
 		VRESULT vr = VerifyHash(filepath);
 		if (vr != VR_OK) {
-			printf(pBad "	%s: SHA256 verification failed! (%i)\n", filepath, vr);
+			prbad("%s: SHA256 verification failed! (%i)", filepath, vr);
 			return false;
 		}	
 	}
@@ -60,12 +59,12 @@ bool CheckFile(const TCHAR* filepath, size_t filesize, bool verifySHA256) {
 	if (strrchr(filepath, '.') && !strcmp(strrchr(filepath, '.'), ".firm")) {
 		int res = VerifyFIRM(filepath);
 		if (res) {
-			printf(pBad "	%s: FIRM verification failed! (%i)\n", filepath, res);
+			prbad("%s: FIRM verification failed! (%i)", filepath, res);
 			return false;
 		}
 	}
 
-	printf(pGood "	%s: File OK!\n", filepath);
+	// prgood("%s: File OK!\n", filepath);
 	return true;
 }
 
@@ -116,13 +115,13 @@ int VerifyFIRM(const TCHAR* filepath) {
 	res = f_read(fp, header, sizeof(FIRMHeader), &read);
 	if (read != sizeof(FIRMHeader)) {
 		f_close(fp);
-		if (!res) res = ~32;
+		if (!res) res = -33;
 		return res;
 	}
 
 	if (memcmp(header->magic, "FIRM", 4) != 0) {
 		f_close(fp);
-		return ~7;
+		return -8;
 	}
 
 	for (FIRMSection* sect = header->sections; sect < header->sections + 4; sect++) {
@@ -136,7 +135,7 @@ int VerifyFIRM(const TCHAR* filepath) {
 		if (res) break;
 
 		if (memcmp(sect->hash, hash, SHA256_BLOCK_SIZE) != 0) {
-			res = ~48;
+			res = -49;
 			break;
 		}
 	}
@@ -198,6 +197,8 @@ FRESULT f_rmdir_r(const TCHAR* path) {
 	return fres;
 }
 
+/* We are not copying anything to the hacked ID1 anymore. */
+#if 0
 FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst) {
 	TCHAR src_b[384], dst_b[384];
 
@@ -270,6 +271,7 @@ FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst) {
 
 	return fres;
 }
+#endif
 
 FRESULT f_dummy(const TCHAR* path, bool force) {
 	FIL fp;

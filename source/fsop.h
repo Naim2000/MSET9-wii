@@ -15,5 +15,4 @@ int VerifyFIRM(const TCHAR*);
 VRESULT VerifyHash(const TCHAR*);
 
 FRESULT f_rmdir_r(const TCHAR* path);
-FRESULT fcopy_r(const TCHAR* src, const TCHAR* dst);
 FRESULT f_dummy(const TCHAR* path, bool force);

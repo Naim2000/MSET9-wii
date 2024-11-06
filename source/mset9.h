@@ -7,6 +7,8 @@ typedef enum MSET9Version {
 	NEW_11_4__11_7
 } MSET9Version;
 
+extern const char* const consoleNames[4];
+
 struct MSET9 {
 	MSET9Version consoleVer;
 	char ID[2][32 +1];

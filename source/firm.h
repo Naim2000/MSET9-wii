@@ -17,7 +17,7 @@ typedef struct FIRMHeader {
 	/* 0x00C */	uint32_t arm11Ep;
 	/* 0x010 */	char reserved[0x30];
 	/* 0x040 */	FIRMSection sections[4];
-//	/* 0x100 */ char RSA2048Sig[0x100];
+	/* 0x100 */ char RSA2048SHA256Sig[0x100];
 } FIRMHeader;
 
-_Static_assert(sizeof(FIRMHeader) == 0x100, "FIRMHeader size incorrect");
+_Static_assert(sizeof(FIRMHeader) == 0x200, "FIRMHeader size incorrect");

@@ -10,6 +10,13 @@
 #define ID1backupTag "_user-id1"
 #define MSET9TriggerFile "002F003A.txt"
 
+const char* const consoleNames[4] = {
+	"Old 3DS, 11.8 up to 11.17",
+	"New 3DS, 11.8 up to 11.17",
+	"Old 3DS, 11.4 up to 11.7",
+	"New 3DS, 11.4 up to 11.7"
+};
+
 enum {
 	dbsSize = 0x31E400,
 };
@@ -33,14 +40,6 @@ typedef const struct N3DSRegion
 	uint32_t MiiPlazaExtData;
 } N3DSRegion;
 
-/*
-typedef const struct haxOffsets
-{
-	uint32_t fopen_offset;
-	uint32_t fread_offset;
-} haxOffsets;
-*/
-
 static N3DSRegion N3DSRegions[NBR_REGIONS] = {
 	{ "USA", 0x8F, 0x217, 0x218 },
 	{ "EUR", 0x98, 0x227, 0x228 },
@@ -53,20 +52,19 @@ static N3DSRegion N3DSRegions[NBR_REGIONS] = {
 const char* const haxid1[4] = {
 
 	// Old 3DS 11.8<->11.17
-	"\xef\xbf\xbf\xef\xab\xbf\xe9\xa4\x91\xe4\xa0\x87\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x88\xe2\x88\x81\xe4\xac\x85\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x83\xe4\x9e\xa0\xe4\x9e\xb8\xe9\x80\x80\xe0\xa0\x8a\xea\x81\xb1\xe0\xa0\x85\xec\xba\x99\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
+	"\xec\x80\x81\xee\x8a\x8f\xef\xbc\x9c\xee\x84\xaf\xe9\xa4\x91\xe4\xa0\x8b\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x87\xe2\x88\x81\xe4\xac\x84\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x82\xe4\x9e\xa0\xe4\x9e\xb8\xea\x81\xb1\xe0\xa0\x85\xec\xba\x99\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
 
 	// New 3DS 11.8<->11.17
-	"\xef\xbf\xbf\xef\xab\xbf\xe9\xa4\x91\xe4\xa0\x87\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x88\xe2\x88\x81\xe4\xac\x85\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x83\xe4\x9e\xa0\xe4\x9e\xb8\xe9\x80\x80\xe0\xa0\x8a\xea\x81\xb1\xe0\xa0\x85\xec\xb9\x9d\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
+	"\xec\x80\x81\xee\x8a\x8f\xef\xbc\x9c\xee\x84\xaf\xe9\xa4\x91\xe4\xa0\x8b\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x87\xe2\x88\x81\xe4\xac\x84\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x82\xe4\x9e\xa0\xe4\x9e\xb8\xea\x81\xb1\xe0\xa0\x85\xec\xb9\x9d\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
 
 	// Old 3DS 11.4<->11.7
-	"\xef\xbf\xbf\xef\xab\xbf\xe9\xa4\x91\xe4\xa0\x87\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x88\xe2\x88\x81\xe4\xac\x85\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x83\xe4\x9e\xa0\xe4\x9e\xb8\xe9\x80\x80\xe0\xa0\x8a\xe9\xb9\x89\xe0\xa0\x85\xec\xb2\x99\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
+	"\xec\x80\x81\xee\x8a\x8f\xef\xbc\x9c\xee\x84\xaf\xe9\xa4\x91\xe4\xa0\x8b\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x87\xe2\x88\x81\xe4\xac\x84\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x82\xe4\x9e\xa0\xe4\x9e\xb8\xe9\xb9\x89\xe0\xa0\x85\xec\xb2\x99\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9",
 
 	// New 3DS 11.4<->11.7
-	"\xef\xbf\xbf\xef\xab\xbf\xe9\xa4\x91\xe4\xa0\x87\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x88\xe2\x88\x81\xe4\xac\x85\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x83\xe4\x9e\xa0\xe4\x9e\xb8\xe9\x80\x80\xe0\xa0\x8a\xe9\xb9\x85\xe0\xa0\x85\xec\xb2\x81\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9"
+	"\xec\x80\x81\xee\x8a\x8f\xef\xbc\x9c\xee\x84\xaf\xe9\xa4\x91\xe4\xa0\x8b\xe4\x9a\x85\xe6\x95\xa9\xea\x84\x87\xe2\x88\x81\xe4\xac\x84\xe4\x9e\x98\xe4\x99\xa8\xe4\x99\x99\xea\xab\x80\xe1\xb0\x97\xe4\x99\x83\xe4\xb0\x82\xe4\x9e\xa0\xe4\x9e\xb8\xe9\xb9\x85\xe0\xa0\x85\xec\xb2\x81\xe0\xa0\x84sdmc\xe9\x80\x80\xe0\xa0\x8a""b9"
 };
 
-
-struct MSET9 mset9 = {};
+struct MSET9 mset9;
 
 static bool is3DSID(const char* name) {
 	if (strlen(name) != 32) return false;
@@ -84,33 +82,34 @@ static bool isHaxID1(const char* name) {
 }
 
 int MSET9Start(void) {
-	char path[256] = "Nintendo 3DS/";
+	char path[256];
 	FRESULT fres;
 	DIR dp = {};
 	FILINFO st[1] = {};
 
 	memset(&mset9, 0, sizeof(mset9));
 
+	strcpy(path, "/Nintendo 3DS/");
 	fres = f_opendir(&dp, path);
 	if (fres == FR_NO_PATH) {
-		printf(pBad "Error #01: Nintendo 3DS folder not found!\n"
-			   pBad "Is your console reading the SD card?\n");
+		prbad("Error #01: Nintendo 3DS folder not found!");
+		prwarn("Is your console reading the SD card?");
 		return false;
 	}
 	else if (fres != FR_OK) {
-		printf(pBad "Failed to open Nintendo 3DS folder (!?) (%i)\n", fres);
+		prbad("Failed to open Nintendo 3DS folder (!?) (%i)", fres);
 		return false;
 	}
 
 	int foundID0 = 0;
 	while ((fres = f_readdir(&dp, st)) == FR_OK && st->fname[0]) {
 		if (!(st->fattrib & AM_DIR)) {
-			printf(pWarn "Found a file in the Nintendo 3DS folder? %s\n", st->fname);
+			prwarn("Found a file in the Nintendo 3DS folder? %s", st->fname);
 			continue;
 		}
 
 		if (is3DSID(st->fname)) {
-			printf(pInfo "Found ID0: %s\n", st->fname);
+			prinfo("Found ID0: %s", st->fname);
 			strncpy(mset9.ID[0], st->fname, 32);
 			foundID0++;
 		}
@@ -118,14 +117,14 @@ int MSET9Start(void) {
 	f_closedir(&dp);
 
 	if (!foundID0) {
-		printf(pBad "Error #07: You have...... no ID0?\n"
-			   pBad "Is your console reading the SD card?\n");
+		prbad("Error #07: You have...... no ID0?");
+		prwarn("Is your console reading the SD card?");
 
 		return false;
 	}
 	else if (foundID0 > 1) {
-		printf(pBad  "Error #07: You have multiple (%i) ID0's!\n"
-			   pInfo "Consult: https://wiki.hacks.guide/wiki/3DS:MID0", foundID0);
+		prbad("Error #07: You have multiple (%i) ID0's!", foundID0);
+		prinfo("Consult: https://wiki.hacks.guide/wiki/3DS:MID0");
 
 		return false;
 	}
@@ -133,71 +132,70 @@ int MSET9Start(void) {
 	sprintf(strrchr(path, '/'), "/%.32s/", mset9.ID[0]);
 	fres = f_opendir(&dp, path);
 	if (fres != FR_OK) {
-		printf(pBad "Failed to open ID0 folder (!?) (%i)\n", fres);
+		prbad("Failed to open ID0 folder (!?) (%i)", fres);
 		return false;
 	}
 
 	int foundID1 = 0;
-	int injectedConsoleVer = -1;
+	int injectedConsoleVer = 0;
 	while ((fres = f_readdir(&dp, st)) == FR_OK && st->fname[0]) {
 		if (!(st->fattrib & AM_DIR)) {
-			printf(pWarn "Found a file in the ID0 folder? %s\n", st->fname);
+			prwarn("Found a file in the ID0 folder? %s", st->fname);
 			continue;
 		}
 
 		if (is3DSID(st->fname) || isBackupID1(st->fname)) {
-			printf(pInfo "Found ID1: %s\n", st->fname);
+			prinfo("Found ID1: %s", st->fname);
 			strncpy(mset9.ID[1], st->fname, 32);
 			mset9.hasBackupID1 = isBackupID1(st->fname);
 			foundID1++;
 		}
 		else if (isHaxID1(st->fname)) {
-			char* ptr = strrchr(path, '/');
-			sprintf(ptr, "/%s/", st->fname);
+			char* ptr = strrchr(path, 0);
+			strcpy(ptr, st->fname);
 
 			if (mset9.hasHaxID1) {
-				puts(pWarn "Duplicate hax ID1!? Man what the h*ll");
+				prwarn("Duplicate hax ID1??");
 				if ((fres = f_rmdir_r(path)) != FR_OK)
-					printf(pWarn "Failed to remove duplicate hax ID1 (%i)\n", fres);
+					prwarn("Failed to remove duplicate hax ID1 (%i)", fres);
 			}
 			else {
 				for (int i = 0; i < 4; i++) {
 					if (!strcmp(haxid1[i], st->fname)) {
-						injectedConsoleVer = i;
+						injectedConsoleVer = i + 1;
 						break;
 					}
 				}
 
-				if (injectedConsoleVer >= 0) {
-					printf(pInfo "Found hacked ID1 (type %i)\n", injectedConsoleVer);
+				if (injectedConsoleVer > 0) {
+					prinfo("Found hacked ID1 (type %i)", injectedConsoleVer);
 					strcat(path, "/extdata/" MSET9TriggerFile);
 					mset9.consoleVer = (MSET9Version)injectedConsoleVer;
 					mset9.hasHaxID1 = true;
 					mset9.hasTriggerFile = (f_stat(path, 0) == FR_OK);
 				} else {
-					puts(pWarn "Unrecognized hax ID1. Goodbye");
-					if ((fres = f_rmdir_r(path)) != FR_OK)
-						printf(pWarn "Failed to unknown duplicate hax ID1 (%i)\n", fres);
+					prwarn("Unrecognized hax ID1. Goodbye");
+					MSET9Remove();
 				}
 			}
 
 			*ptr = 0;
 		}
 		else {
-			printf(pWarn "Unrecognized folder in ID0 %s\n", st->fname);
+			prwarn("Unrecognized folder in ID0 %s", st->fname);
 		}
 	}
 	f_closedir(&dp);
 
 	if (!foundID1) {
-		puts(pBad "Error #12: You have...... no ID1?\n"
-			 pBad "Is your console reading the SD card?");
+		prbad("Error #12: You have...... no ID1?");
+		prwarn("Is your console reading the SD card?");
 
 		return false;
 	}
 	else if (foundID1 > 1) {
-		printf(pBad "Error #12: You have multiple (%i) ID1's!\n"
-			   pBad "Consult: https://wiki.hacks.guide/wiki/3DS:MID1\n", foundID1);
+		prbad("Error #12: You have multiple (%i) ID1's!", foundID1);
+		prinfo("Consult: https://wiki.hacks.guide/wiki/3DS:MID1");
 
 		return false;
 	}
@@ -207,70 +205,84 @@ int MSET9Start(void) {
 }
 
 bool MSET9SanityCheckA(void) {
-//	puts(pInfo "Checking extracted files...");
+	prinfo("Checking extracted files...");
 	if (!CheckFile("/boot9strap/boot9strap.firm", 0, true)
 	+	!CheckFile("/boot.firm", 0, false)
 	+	!CheckFile("/boot.3dsx", 0, false)
 	+	!CheckFile("/b9", 0, false)
 	+	!CheckFile("/SafeB9S.bin", 0, false))
 	{
-		puts(pBad  "Error #08: One or more files are missing or malformed!");
-		puts(pInfo "Please re-extract the MSET9 zip file, \n"
-			 pInfo "overwriting any files when prompted.");
+		prbad("Error #08: One or more files are missing or malformed!");
+		prinfo("Please re-extract the MSET9 zip file, ");
+		prinfo("overwriting any files when prompted.");
 
 		return false;
 	}
 
-	puts(pGood "Extracted files look good!");
+	prgood("Extracted files look good!");
 	return true;
 }
 
 bool MSET9CreateHaxID1(MSET9Version ver) {
-	char path[256] = "/Nintendo 3DS/";
+	char path[256];
 	FRESULT fres;
 
 	if (!mset9.setup) return false;
 
-	sprintf(strrchr(path, '/'), "/%.32s/", mset9.ID[0]);
+	sprintf(path, "/Nintendo 3DS/%.32s/", mset9.ID[0]);
 
 	fres = f_chdir(path);
 	if (fres != FR_OK) {
-		printf(pBad "f_chdir failed? (%i)\n", fres);
+		prbad("f_chdir failed? (%i)", fres);
 		return false;
 	}
 
 	if (mset9.hasHaxID1) {
 		if (ver == mset9.consoleVer) return true;
 
-		puts(pInfo "Renaming hacked ID1...");
-		fres = f_rename(haxid1[mset9.consoleVer], haxid1[ver]);
+		prinfo("Renaming hacked ID1...");
+
+		fres = f_rename(haxid1[mset9.consoleVer - 1], haxid1[ver - 1]);
+		strcpy(strrchr(path, '/') + 1, haxid1[ver - 1]);
 	} else {
-		puts(pInfo "Creating hacked ID1...");
-		fres = f_mkdir(haxid1[ver]);
+		prinfo("Creating hacked ID1...");
+
+		strcat(path, haxid1[ver]);
+		fres = f_mkdir(path);
 	}
 
-	if (fres == FR_OK) {
-		f_chdir(haxid1[ver]);
-		f_mkdir("dbs");
-		f_dummy("dbs/title.db",  false);
-		f_dummy("dbs/import.db", false);
-		f_chdir(path);
-	} else {
-		printf(pBad "Failed to create hax ID1 (%i)\n", fres);
+	if (fres != FR_OK) {
+		prbad("Failed to create hax ID1 (%i)", fres);
+		return fres;
 	}
+
+	strcat(path, "/dbs");
+	f_mkdir(path);
+
+	strcat(path, "/title.db");
+	f_dummy(path, false);
+
+	strcpy(strrchr(path, '/'), "/import.db");
+	f_dummy(path, false);
+
+	mset9.hasHaxID1 = true;
 
 	if (!mset9.hasBackupID1) {
-		char ID1backupName[42];
+		char ID1backupName[32 + sizeof(ID1backupTag)];
 		strcpy(ID1backupName, mset9.ID[1]);
 		strcat(ID1backupName, ID1backupTag);
 
-		puts(pInfo "Backing up original ID1...");
+		prinfo("Backing up original ID1...");
+
 		fres = f_rename(mset9.ID[1], ID1backupName);
-		if (fres != FR_OK)
-			printf("f_rename failed? (%i)\n", fres);
+		if (fres != FR_OK) {
+			prbad("f_rename failed? (%i)", fres);
+			MSET9Remove();
+			return fres;
+		}
 	}
 
-	f_chdir("");
+	prgood("Created hacked ID1.");
 	return (fres == FR_OK);
 }
 
@@ -279,16 +291,17 @@ bool MSET9SanityCheckB(void) {
 
 	if (!mset9.hasHaxID1) return -1;
 
-	sprintf(path, "/Nintendo 3DS/%.32s/%s/", mset9.ID[0], haxid1[mset9.consoleVer]);
+	sprintf(path, "/Nintendo 3DS/%.32s/%s/", mset9.ID[0], haxid1[mset9.consoleVer - 1]);
+
 	FRESULT fres = f_chdir(path);
 	if (fres != FR_OK) {
-		printf("f_chdir failed? (%i)\n", fres);
+		prbad("f_chdir failed? (%i)", fres);
 		return false;
 	}
 
 //	puts(pNote "Performing sanity checks...");
 
-	puts(pInfo "Checking databases...");
+//	puts(pInfo "Checking databases...");
 	if (!CheckFile("dbs/import.db", dbsSize, false)
 	+	!CheckFile("dbs/title.db",  dbsSize, false))
 	{
@@ -298,7 +311,7 @@ bool MSET9SanityCheckB(void) {
 	}
 	else mset9.titleDbsOK = true;
 
-	puts(pInfo "Looking for extdata...");
+//	puts(pInfo "Looking for extdata...");
 	char extDataPath[30];
 
 	for (N3DSRegion* rgn = N3DSRegions; rgn < N3DSRegions + NBR_REGIONS; rgn++) {
@@ -327,19 +340,21 @@ bool MSET9Injection(bool create) {
 	sprintf(path, "/Nintendo 3DS/%.32s/%s/extdata/" MSET9TriggerFile, mset9.ID[0], haxid1[mset9.consoleVer -1]);
 
 	if (!create) {
-		puts(pInfo "Removing trigger file...");
+		prinfo("Removing trigger file...");
 		fres = f_unlink(path);
 		if (fres != FR_OK) {
-			printf(pBad "f_unlink failed! (%i)\n", fres);
+			prbad("f_unlink failed! (%i)", fres);
 			return false;
 		}
+		prgood("Removed trigger file.");
 	} else {
-		puts(pInfo "Injecting trigger file...");
+		prinfo("Injecting trigger file...");
 		fres = f_dummy(path, true);
 		if (fres != FR_OK) {
-			printf(pBad "f_dummy failed! (%i)\n", fres);
+			prbad("f_dummy failed! (%i)", fres);
 			return false;
 		}
+		prinfo("Injected trigger file. GO GO!");
 	}
 
 /*
@@ -356,32 +371,33 @@ void MSET9Remove(void) {
 
 	if (!mset9.setup) return;
 
-	puts(pInfo "Removing MSET9...");
+	prinfo("Removing MSET9...");
 	sprintf(path, "0:/Nintendo 3DS/%.32s/", mset9.ID[0]);
 
 	FRESULT fres = f_chdir(path);
 	if (fres != FR_OK) {
-		printf("f_chdir failed? (%i)\n", fres);
+		prbad("f_chdir failed? (%i)\n", fres);
 		return;
 	}
 
 	if (mset9.hasHaxID1) {
-		puts(pInfo "Removing hacked ID1...");
+		prinfo("Removing hacked ID1...");
 		fres = f_rmdir_r(haxid1[mset9.consoleVer -1]);
 		if (fres != FR_OK)
-			printf("f_rmdir failed? (%i)\n", fres);
+			prbad("f_rmdir failed? (%i)\n", fres);
 		else
 			mset9.hasHaxID1 = false;
 	}
 
 	if (mset9.hasBackupID1) {
+		prinfo("Restoring user ID1...");
 		char ID1backupName[42];
 		strcpy(ID1backupName, mset9.ID[1]);
 		strcat(ID1backupName, ID1backupTag);
 
 		fres = f_rename(ID1backupName, mset9.ID[1]);
 		if (fres != FR_OK)
-			printf("f_rename failed? (%i)\n", fres);
+			prbad("f_rename failed? (%i)\n", fres);
 		else
 			mset9.hasBackupID1 = false;
 	}

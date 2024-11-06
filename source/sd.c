@@ -11,8 +11,6 @@
 static bool sdMounted = false;
 static const DISC_INTERFACE* sdmc = &__io_wiisd;
 static FATFS fs = {};
-// TODO
-// static uint32_t sdcard_CID[4] __aligned(0x20);
 
 bool SDMount(void) {
 	if (sdMounted) return true;
@@ -23,7 +21,7 @@ bool SDMount(void) {
 	const char* p = spin;
 	bool inserted = sdmc->isInserted();
 	while (!inserted) {
-		printf(pWarn "Please insert your SD card. [%c] (Press HOME to cancel)\r", *p++);
+		printf("Please insert your SD card. [%c]\r", *p++);
 		scanpads();
 		if (buttons_down(WPAD_BUTTON_HOME)) break;
 
@@ -38,31 +36,29 @@ bool SDMount(void) {
 	clearln(0);
 
 	if (!inserted) {
-		puts(pWarn "Operation cancelled by user...");
+		printf("Operation cancelled by user\n");
 		return false;
 	}
 
-	printf(pInfo "Mounting SD card ...\r");
+	printf("Mounting SD card ... ");
 	// usleep(1000000);
-	sdmc->startup();
-	FRESULT fres = f_mount(&fs, "0:/", true);
+	FRESULT fres = f_mount(&fs, "", true);
 	if (fres == FR_OK) {
 		unsigned long freeSpace = (fs.free_clst * fs.csize);
 		unsigned long totalSpace = ((fs.n_fatent - 2) * fs.csize);
 
-		puts(pGood "Mounting SD card OK!");
+		puts("OK!");
 		sdMounted = true;
-		// WiiSD_GetCID(&sdcard_CID);
 
 		if (totalSpace < 0x400000) // 2GB (4M sectors)
 		{
-			printf(pWarn "Your SD card is under 2GB? (%luMB)\n", totalSpace / 0x800);
+			prwarn("Your SD card is under 2GB? (%luMiB)\n", totalSpace >> (20 - 9));
 			usleep(2000000);
 		}
 
 	}
 	else {
-		printf(pBad "Mounting SD card failed! (%i)\n", fres);
+		printf("Failed! (%i)\n", fres);
 	}
 
 	return sdMounted;
@@ -70,9 +66,9 @@ bool SDMount(void) {
 
 void SDUnmount(void) {
 	if (sdMounted) {
-		f_unmount("0:/");
+		f_unmount("");
 		// sdmc->shutdown();
-		puts(pInfo "Unmounted SD card.");
+		prinfo("Unmounted SD card.");
 		sdMounted = false;
 	}
 }
@@ -84,7 +80,7 @@ bool SDRemount(void) {
 	const char* p = spin;
 	bool inserted = sdmc->isInserted();
 	while (inserted) {
-		printf(pWarn "Eject your SD card! [%c] (Press HOME to cancel)\r", *p++);
+		printf("Eject your SD card! [%c]\r", *p++);
 		scanpads();
 		if (buttons_down(WPAD_BUTTON_HOME)) break;
 
@@ -102,7 +98,7 @@ bool SDRemount(void) {
 	clearln(0);
 	if (inserted) return false;
 
-	puts(pGood "SD card ejected.");
+	prinfo("SD card ejected.");
 	usleep(10000000);
 
 	return SDMount();
